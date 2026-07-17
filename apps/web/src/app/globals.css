@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Inter, system-ui, sans-serif;
+  font-feature-settings: "ss01";
+  color: #363636;
+  background: #ffffff;
+}
+
+/* Korean wraps at word (어절) boundaries, never mid-syllable. Scoped to ko —
+   Japanese/Chinese have no spaces, so keep-all would break their layout.
+   Pretendard is the familiar Korean SaaS face; Hangul glyphs also render
+   visually smaller than Latin at equal px, so ko gets a gentle zoom bump. */
+body:lang(ko) {
+  font-family: "Pretendard Variable", Pretendard, Inter, system-ui, sans-serif;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  zoom: 1.06;
+}
+
+/* Headlines wrap with visually balanced line lengths; body text avoids a
+   single orphan word on the last line. Progressive enhancement. */
+h1, h2, h3 {
+  text-wrap: balance;
+}
+p, li {
+  text-wrap: pretty;
+}
+
+@keyframes ping-dot {
+  0% { box-shadow: 0 0 0 0 rgba(0, 165, 27, 0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(0, 165, 27, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 165, 27, 0); }
+}
+.animate-ping-dot { animation: ping-dot 2.4s ease-out infinite; }
+
+@keyframes bar-grow {
+  from { transform: scaleY(0.2); }
+  to { transform: scaleY(1); }
+}
+.animate-bar { transform-origin: bottom; animation: bar-grow 0.9s ease-out both; }
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center bg-primary text-white text-[16px] font-medium rounded-btn px-5 py-3 hover:opacity-90 transition-opacity min-h-[44px];
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center bg-canvas text-ink text-[16px] font-medium rounded-btn px-5 py-3 border border-hairline hover:border-ink transition-colors min-h-[44px];
+  }
+  .card {
+    @apply bg-canvas border border-hairline rounded-card p-8;
+  }
+  .eyebrow {
+    @apply uppercase text-eyebrow text-mute;
+  }
+  .input {
+    @apply w-full border border-hairline rounded-btn px-4 py-3 text-[16px] text-ink outline-none focus:border-ink transition-colors;
+  }
+}

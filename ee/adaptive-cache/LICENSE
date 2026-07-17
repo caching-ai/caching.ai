@@ -1,0 +1,24 @@
+Caching.ai Enterprise License
+
+Copyright (c) 2026 AI3 Inc. (주식회사 AI3). All rights reserved.
+
+The software in this directory and its subdirectories ("Enterprise Code") is
+NOT covered by the Apache License 2.0 that applies to the rest of this
+repository. The Enterprise Code is source-visible for transparency, but it is
+proprietary software of AI3 Inc.
+
+You may:
+  1. View and study the Enterprise Code.
+  2. Modify and run it solely for local development, evaluation, or testing.
+  3. Use it in production only under a valid commercial agreement with
+     AI3 Inc., or as part of the hosted service at https://caching.ai.
+
+You may not, without such an agreement:
+  - use the Enterprise Code in production;
+  - offer the Enterprise Code (or a derivative of it) to third parties as
+    part of a hosted or managed service;
+  - redistribute the Enterprise Code outside this repository.
+
+Contact: support@caching.ai
+
+THE ENTERPRISE CODE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.

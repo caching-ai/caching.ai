@@ -1,0 +1,25 @@
+{
+  "name": "@caching/proxy",
+  "version": "0.8.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/index.js --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "dev": "tsx src/index.ts",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@caching/ee-adaptive": "workspace:*",
+    "@caching/shared": "workspace:*",
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.6.14",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.20.0",
+    "esbuild": "^0.24.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

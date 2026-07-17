@@ -1,0 +1,66 @@
+# Self-hosted Caching.ai — proxy + console + Postgres.
+#   cp .env.example .env   (fill ENCRYPTION_KEY / SESSION_SECRET)
+#   docker compose up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: caching
+      POSTGRES_PASSWORD: caching
+      POSTGRES_DB: caching
+    volumes:
+      - caching-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caching"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  proxy:
+    build:
+      context: .
+      dockerfile: apps/proxy/Dockerfile
+    environment:
+      DATABASE_URL: postgres://caching:caching@db:5432/caching
+      ENCRYPTION_KEY: "${ENCRYPTION_KEY:?generate with openssl rand -hex 32}"
+      PORT: 8080
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+      CONSOLE_URL: ${CONSOLE_URL:-http://localhost:3000/console/keys}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-100}
+    ports:
+      - "8787:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # baked into the console's copy-paste snippets at build time
+        NEXT_PUBLIC_PROXY_URL: ${NEXT_PUBLIC_PROXY_URL:-http://localhost:8787}
+    environment:
+      DATABASE_URL: postgres://caching:caching@db:5432/caching
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SESSION_SECRET: "${SESSION_SECRET:?generate with openssl rand -hex 32}"
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      proxy:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  caching-db:

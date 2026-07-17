@@ -1,0 +1,23 @@
+{
+  "name": "@caching/ee-adaptive",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "SEE LICENSE IN LICENSE",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@caching/shared": "workspace:*",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.7.2"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "echo covered by @caching/proxy tests"
+  }
+}

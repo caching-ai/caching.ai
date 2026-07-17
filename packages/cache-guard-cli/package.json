@@ -1,0 +1,33 @@
+{
+  "name": "cache-guard",
+  "version": "0.1.1",
+  "description": "CI guard for LLM prompt-cache prefixes \u2014 fails the build when a system prompt or tool list changes unintentionally.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "cache-guard": "./bin/cache-guard.mjs"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "llm",
+    "prompt-caching",
+    "anthropic",
+    "openai",
+    "ci",
+    "finops",
+    "cache"
+  ],
+  "homepage": "https://caching.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caching-ai/caching.ai.git",
+    "directory": "packages/cache-guard-cli"
+  }
+}

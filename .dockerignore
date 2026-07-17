@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+**/.next
+**/dist
+.env
+.env.*
+!.env.example
+scratch
+screenshots
+scripts
+*.log
+.DS_Store

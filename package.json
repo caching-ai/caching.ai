@@ -1,0 +1,11 @@
+{
+  "name": "caching-ai",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.3.0"
+  }
+}
