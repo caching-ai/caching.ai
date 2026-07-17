@@ -3,6 +3,7 @@ import "./globals.css";
 import { getLocale } from "@/lib/i18n/server";
 import { getDict } from "@/lib/i18n/shared";
 import { I18nProvider } from "@/components/I18nProvider";
+import ConfirmProvider from "@/components/ConfirmDialog";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -48,7 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <I18nProvider locale={locale} dict={dict}>
-          {children}
+          <ConfirmProvider>{children}</ConfirmProvider>
         </I18nProvider>
       </body>
     </html>

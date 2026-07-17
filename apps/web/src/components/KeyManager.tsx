@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "./I18nProvider";
 import { fmt } from "@/lib/i18n/shared";
 import Tip from "./Tooltip";
+import { useConfirm } from "./ConfirmDialog";
+import { useFx } from "@/lib/fx";
 import CacheVisualGuide from "./CacheVisualGuide";
 
 interface KeyRow {
@@ -11,7 +13,6 @@ interface KeyRow {
   key_prefix_display: string;
   auto_cache_control: boolean;
   anthropic_cache_ttl: "5m" | "1h";
-  openai_cache_retention: "default" | "24h";
   cache_tuning_mode: "manual" | "auto";
   keepalive_enabled: boolean;
   keepalive_budget_usd_daily: string;
@@ -123,7 +124,6 @@ interface KeyRec {
     savingsPct: number;
     confident: boolean;
   };
-  openaiRetention?: { samples: number; recommended: "24h" };
 }
 
 const SNIPPET_PROVIDERS = ["anthropic", "openai", "gemini", "grok"] as const;
@@ -170,6 +170,7 @@ function Snippet({ proxyUrl, plaintext }: { proxyUrl: string; plaintext: string 
 /** account-level provider keys — register once, every ck_ key uses them */
 function AccountProviderKeys() {
   const { dict } = useI18n();
+  const { confirm } = useConfirm();
   const t = dict.console.keys;
   const tips = dict.console.tips;
   const [registered, setRegistered] = useState<Record<string, string>>({});
@@ -210,7 +211,7 @@ function AccountProviderKeys() {
               </span>
               {registered[p.id] && (
                 <button className="text-[14px] text-error hover:underline"
-                  onClick={() => { if (confirm(t.providerRemoveConfirm)) void save(p.id, { remove: true }); }}>
+                  onClick={async () => { if (await confirm(t.providerRemoveConfirm, { danger: true })) void save(p.id, { remove: true }); }}>
                   {t.providerRemove}
                 </button>
               )}
@@ -242,7 +243,9 @@ function AccountProviderKeys() {
 }
 
 export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
+  const { confirm } = useConfirm();
+  const { cur, rate } = useFx(locale);
   const t = dict.console.keys;
   const tips = dict.console.tips;
   const [keys, setKeys] = useState<KeyRow[]>([]);
@@ -425,7 +428,7 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
               </div>
               {!k.revoked_at && (
                 <button className="text-[15px] text-error hover:underline"
-                  onClick={() => { if (confirm(t.revokeConfirm)) void patch(k.id, { revoke: true }); }}>
+                  onClick={async () => { if (await confirm(t.revokeConfirm, { danger: true })) void patch(k.id, { revoke: true }); }}>
                   {t.revoke}
                 </button>
               )}
@@ -510,32 +513,15 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
                         </p>
                       )}
                     </div>
-                    <div className={auto ? "opacity-50" : ""}>
+                    <div>
                       <span className="inline-flex items-center text-[15px] font-medium text-ink">
-                        {t.retentionTitle}
-                        <Tip text={tips.openaiRetention} />
+                        {t.autoProvidersTitle}
                       </span>
-                      <select
-                        className="input ml-3 mt-1.5 !w-auto !py-2 text-[15px]"
-                        value={k.openai_cache_retention}
-                        disabled={auto}
-                        onChange={(e) => void patch(k.id, { openai_cache_retention: e.target.value })}
-                      >
-                        <option value="default">{t.retentionDefault}</option>
-                        <option value="24h">{t.retention24h}</option>
-                      </select>
-                      <p className="mt-1.5 text-[14px] leading-relaxed text-mute">{t.retentionNote}</p>
-                      {!auto && rec?.openaiRetention && k.openai_cache_retention === "default" && (
-                        <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[14px]" data-testid="retention-suggestion">
-                          <span className="rounded bg-[#00d722]/10 px-2 py-1 text-[#046a12]">
-                            {t.adaptiveRetentionSuggest}
-                          </span>
-                          <button className="text-[14px] font-medium text-ink underline hover:no-underline"
-                            onClick={() => void patch(k.id, { openai_cache_retention: "24h" })}>
-                            {t.adaptiveApply}
-                          </button>
-                        </p>
-                      )}
+                      <ul className="mt-1.5 flex flex-col gap-1 text-[14px] leading-relaxed text-mute">
+                        <li>{t.autoOpenai}</li>
+                        <li>{t.autoGemini}</li>
+                        <li>{t.autoGrok}</li>
+                      </ul>
                     </div>
                   </div>
                   );
@@ -555,14 +541,28 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
                 </label>
 
                 {k.keepalive_enabled && (
-                  <div className="flex items-center gap-3 pl-7">
+                  <div className="flex flex-wrap items-center gap-3 pl-7">
                     <span className="inline-flex items-center text-[15px] text-body-mid">
                       {t.budget}
                       <Tip text={tips.budget} />
                     </span>
-                    <input type="number" min={0} max={1000} step={0.5} className="input !w-28"
-                      defaultValue={Number(k.keepalive_budget_usd_daily)}
-                      onBlur={(e) => void patch(k.id, { keepalive_budget_usd_daily: e.target.value })} />
+                    {/* entered in the visitor's currency, stored in USD */}
+                    <input key={`budget-${k.id}-${rate}`} type="number" min={0}
+                      step={cur.integer ? 100 : 0.5} className="input !w-32"
+                      defaultValue={
+                        cur.integer
+                          ? Math.round(Number(k.keepalive_budget_usd_daily) * rate)
+                          : Number((Number(k.keepalive_budget_usd_daily) * rate).toFixed(2))
+                      }
+                      onBlur={(e) => void patch(k.id, {
+                        keepalive_budget_usd_daily: (Number(e.target.value) / rate).toFixed(4),
+                      })} />
+                    <span className="text-[13px] text-mute">{cur.code}</span>
+                    {cur.code !== "USD" && (
+                      <span className="text-[13px] text-mute">
+                        {fmt(t.budgetFxHint, { usd: "$" + Number(k.keepalive_budget_usd_daily).toFixed(2) })}
+                      </span>
+                    )}
                   </div>
                 )}
                 {k.keepalive_enabled && k.keepalive_hold_until &&
@@ -593,7 +593,7 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
                             </span>
                             {overridden && (
                               <button className="text-[14px] text-error hover:underline"
-                                onClick={() => { if (confirm(t.providerRemoveConfirm)) void patch(k.id, { remove_provider: p.id }); }}>
+                                onClick={async () => { if (await confirm(t.providerRemoveConfirm, { danger: true })) void patch(k.id, { remove_provider: p.id }); }}>
                                 {t.providerRemove}
                               </button>
                             )}

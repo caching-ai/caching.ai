@@ -40,9 +40,9 @@ const ALERT_STRINGS = {
     subject: (name: string) => `『${name}』 키가 오늘 워밍 예산에 도달했어요`,
     title: "워밍 예산에 도달했어요",
     body: (name: string, budget: string, spent: string, pings: number) =>
-      `<strong>${name}</strong> 키의 캐시 워밍이 오늘 예산 <strong>${budget}</strong>에 도달해서(핑 ${pings}회 · ${spent} 사용), ` +
-      `내일(UTC)까지 핑을 쉬어요. 그동안 캐시 수명보다 긴 공백이 생기면 다음 호출은 다시 정가를 내요.`,
-    note: "핑 비용은 순절감액에서 이미 빠져 있어요 — 이득이 안 된 워밍 비용을 따로 내는 일은 없어요.",
+      `<strong>${name}</strong> 키의 캐시 워밍이 오늘 예산 <strong>${budget}</strong>에 도달해서(연장 신호 ${pings}회 · ${spent} 사용), ` +
+      `내일(UTC)까지 워밍을 쉬어요. 그동안 캐시 수명보다 긴 공백이 생기면 다음 호출은 다시 정가를 내요.`,
+    note: "연장 신호 비용은 순절감액에서 이미 빠져 있어요 — 이득이 안 된 워밍 비용을 따로 내는 일은 없어요.",
     cta: "예산 조정하기",
     footer: "예산에 실제로 도달했을 때만, 키마다 하루 최대 한 번 보내드려요.",
     unsub: "클릭 한 번으로 수신 거부",

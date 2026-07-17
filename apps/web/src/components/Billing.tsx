@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "./I18nProvider";
+import { useConfirm } from "./ConfirmDialog";
 import Tip from "./Tooltip";
 
 interface Period {
@@ -32,6 +33,7 @@ declare global {
 /** card-on-file — Toss for Korean users, Stripe elsewhere */
 function PaymentMethod({ tossClientKey }: { tossClientKey: string }) {
   const { dict, locale } = useI18n();
+  const { confirm } = useConfirm();
   const t = dict.console.billing;
   const [method, setMethod] = useState<Method | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -87,7 +89,7 @@ function PaymentMethod({ tossClientKey }: { tossClientKey: string }) {
   }
 
   async function removeCard() {
-    if (!confirm(t.pmRemoveConfirm)) return;
+    if (!(await confirm(t.pmRemoveConfirm, { danger: true }))) return;
     await fetch("/api/billing/pm", { method: "DELETE" });
     await load();
   }

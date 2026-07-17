@@ -89,7 +89,7 @@ const REPORT_STRINGS = {
     saved: "캐싱으로 절감",
     leaking: "아직 새는 돈",
     line: (req: string, hit: string) => `요청 <strong style="color:#080808;">${req}</strong>회 · 히트율 <strong style="color:#080808;">${hit}</strong> · 주 사용 모델`,
-    keepalive: (n: number, cost: string) => `캐시가 식지 않도록 자동 연장 핑을 ${n}회 보냈어요(${cost}).`,
+    keepalive: (n: number, cost: string) => `캐시가 식지 않도록 자동 연장 신호를 ${n}회 보냈어요(${cost}).`,
     breaker: (rate: string) => `⚠️ 요청의 ${rate}에서 프롬프트 앞부분이 바뀌었어요 — 시스템 프롬프트 속 타임스탬프나 랜덤 ID가 원인일 가능성이 커요. 보통 한 줄만 고치면 가장 큰 절감이 열려요.`,
     tuning: (n: number, ex: string) => `자동 최적화가 지난주 실트래픽을 보고 캐시 설정 ${n}건을 조정했어요 — 예: ${ex}. 자세한 근거는 콘솔의 각 키에서 볼 수 있어요.`,
     tuningSetting: { anthropic_cache_ttl: "Anthropic 캐시 수명", openai_cache_retention: "OpenAI 캐시 보존" } as Record<string, string>,

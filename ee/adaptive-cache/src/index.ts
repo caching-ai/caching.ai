@@ -2,7 +2,6 @@
 // Adaptive cache tuning: learn each key's real request rhythm and apply the
 // cheapest cache settings automatically. Activated only when CACHING_CLOUD=1.
 import type pg from "pg";
-import { openaiCacheClass } from "@caching/shared";
 
 // Economics in "prefix units" (1 = the list price of the cacheable prefix),
 // mirroring apps/proxy/src/keepalive.ts and Anthropic's published multipliers:
@@ -85,9 +84,6 @@ export function simulateAnthropicTtl(gapsMs: number[], keepalive: boolean): TtlS
 
 export interface KeyRecommendation {
   anthropic?: TtlSimulation;
-  /** 24h retention is free and removes the need for warming pings — recommend
-   *  it as soon as the key has real OpenAI traffic */
-  openaiRetention?: { samples: number; recommended: "24h" };
 }
 
 export async function recommendForKey(
@@ -112,12 +108,8 @@ export async function recommendForKey(
   for (let i = 1; i < anthropicTs.length; i++) gaps.push(anthropicTs[i] - anthropicTs[i - 1]);
   if (gaps.length) out.anthropic = simulateAnthropicTtl(gaps, keepalive);
 
-  // Only models where extended retention actually applies count — GPT-5.6+
-  // live in fixed 30m windows, so a '24h' recommendation would be meaningless.
-  const openaiCount = rows.filter(
-    (r) => r.provider === "openai" && openaiCacheClass(r.model) === "24h"
-  ).length;
-  if (openaiCount >= 5) out.openaiRetention = { samples: openaiCount, recommended: "24h" };
+  // OpenAI retention is handled automatically per model by the keep-alive
+  // sweep (openaiCacheClass) — nothing to recommend anymore.
 
   return out;
 }
@@ -179,18 +171,6 @@ export async function adaptiveSweep(pool: pg.Pool): Promise<number> {
       changed++;
     }
 
-    if (rec.openaiRetention && key.openai_cache_retention === "default") {
-      await pool.query(
-        `UPDATE api_keys SET openai_cache_retention = '24h'
-          WHERE id = $1 AND cache_tuning_mode = 'auto'`,
-        [key.id]
-      );
-      await recordDecision(
-        pool, key.id, "openai_cache_retention",
-        "default", "24h", rec.openaiRetention
-      );
-      changed++;
-    }
   }
   return changed;
 }

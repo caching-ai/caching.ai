@@ -1,25 +1,16 @@
 "use client";
 import { useState } from "react";
 import { useI18n } from "./I18nProvider";
+import { useFx } from "@/lib/fx";
 
 // Honest model: providers already cache — the win is a HIGHER hit rate.
 // bill(hit) = tokens × price × (1 − 0.9 × hit)   (cache reads at 0.1×)
 const PRICE_PER_MTOK = 5; // Opus-tier input price used for illustration
 
-// Static FX snapshot (2026-07) so each locale reads the numbers in its own
-// currency — illustration only, the note says so. Update rarely; rough is fine.
-const CURRENCY: Record<string, { code: string; rate: number; numLocale: string }> = {
-  en: { code: "USD", rate: 1, numLocale: "en-US" },
-  ko: { code: "KRW", rate: 1520, numLocale: "ko-KR" },
-  ja: { code: "JPY", rate: 162, numLocale: "ja-JP" },
-  zh: { code: "CNY", rate: 6.8, numLocale: "zh-CN" },
-  es: { code: "EUR", rate: 0.87, numLocale: "es-ES" },
-};
-
 export default function SavingsCalculator() {
   const { dict, locale } = useI18n();
   const t = dict.calc;
-  const cur = CURRENCY[locale] ?? CURRENCY.en;
+  const { cur, rate, fmtMoney } = useFx(locale);
   const [mtok, setMtok] = useState(500);
   const [currentHit, setCurrentHit] = useState(25);
   const [targetHit, setTargetHit] = useState(70);
@@ -29,12 +20,7 @@ export default function SavingsCalculator() {
   const after = bill(Math.max(targetHit, currentHit));
   const saved = Math.max(0, now - after);
 
-  const fmt = (v: number) =>
-    new Intl.NumberFormat(cur.numLocale, {
-      style: "currency",
-      currency: cur.code,
-      maximumFractionDigits: 0,
-    }).format(v * cur.rate);
+  const fmt = (v: number) => fmtMoney(v, 0);
 
   return (
     <div className="card shadow-featured">
@@ -87,7 +73,7 @@ export default function SavingsCalculator() {
               {fmt(saved)}{t.perMo}
             </div>
           </div>
-          <p className="text-sm text-mute">{t.note}{cur.rate !== 1 ? ` ${t.fxNote}` : ""}</p>
+          <p className="text-sm text-mute">{t.note}{rate !== 1 ? ` ${t.fxNote}` : ""}</p>
         </div>
       </div>
     </div>

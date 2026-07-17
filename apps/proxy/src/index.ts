@@ -17,6 +17,7 @@ import {
 } from "./emailReport.js";
 import { startBudgetAlertLoop } from "./budgetAlert.js";
 import { startRollupLoop } from "./rollup.js";
+import { startFxLoop } from "./fx.js";
 
 const cfg = loadConfig();
 const pool = getPool(cfg.databaseUrl);
@@ -67,6 +68,7 @@ startKeepaliveLoop({
 });
 startBillingLoop(pool);
 startRollupLoop(pool);
+startFxLoop(pool);
 // cloud-only (ee/adaptive-cache, commercial license): adaptive cache tuning
 if (process.env.CACHING_CLOUD === "1") {
   startAdaptiveLoop(pool);

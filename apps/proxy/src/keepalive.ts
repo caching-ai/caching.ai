@@ -54,7 +54,6 @@ interface Candidate {
   grok_key_encrypted: string | null;
   keepalive_budget_usd_daily: string;
   anthropic_cache_ttl: "5m" | "1h";
-  openai_cache_retention: "default" | "24h";
   keepalive_hold_until: Date | null;
   last_request_at: Date;
   last_ping_at: Date | null;
@@ -206,7 +205,7 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
             ks.pings_today, ks.spend_today_usd,
             to_char(ks.spend_day, 'YYYY-MM-DD') AS spend_day,
             ${PROVIDER_KEY_FALLBACK},
-            k.keepalive_budget_usd_daily, k.anthropic_cache_ttl, k.openai_cache_retention,
+            k.keepalive_budget_usd_daily, k.anthropic_cache_ttl,
             k.keepalive_hold_until
        FROM keepalive_state ks
        JOIN api_keys k ON k.id = ks.api_key_id
@@ -229,14 +228,14 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
 
   let pinged = 0;
   for (const row of rows) {
-    // OpenAI retention '24h' declares a non-ZDR org, where the upstream hold
-    // depends on the MODEL: pre-GPT-5.6 models keep the cache ~24h (pings
-    // would only burn budget — skip), GPT-5.6+ hold a ~30m window (one ping
-    // per window), and non-extended models (gpt-4o…) are in-memory ~5-10m
-    // (standard cadence). Legacy rows without a saved model keep the old
-    // skip behavior. retention 'default' (ZDR-ish orgs) is always in-memory.
-    const openai24h = row.provider === "openai" && row.openai_cache_retention === "24h";
-    const openaiClass = openai24h ? (row.model ? openaiCacheClass(row.model) : "24h") : null;
+    // OpenAI is fully model-aware — no user setting involved: pre-GPT-5.6
+    // models keep the cache ~24h upstream (pings would only burn budget —
+    // skip), GPT-5.6+ hold a ~30m window (one ping per window), non-extended
+    // models (gpt-4o…) are in-memory ~5-10m (standard cadence). Rows without
+    // a saved model (legacy) are skipped — never spend on unknowns. Rare ZDR
+    // orgs (short retention everywhere) lose OpenAI warming; documented.
+    const openaiClass =
+      row.provider === "openai" ? (row.model ? openaiCacheClass(row.model) : "24h") : null;
     if (openaiClass === "24h") continue;
 
     // Anthropic 1h TTL needs one ping per hour, not one every 4 minutes.

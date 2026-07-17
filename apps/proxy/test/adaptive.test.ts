@@ -78,18 +78,11 @@ test("adaptiveSweep applies confident TTL change and records the decision", asyn
   assert.ok(reason.samples >= 20);
 });
 
-test("adaptiveSweep turns on OpenAI 24h retention when the key has OpenAI traffic", async () => {
+test("adaptiveSweep leaves OpenAI alone — retention is model-automatic now", async () => {
   const now = Date.now();
-  // mixed traffic: only extended-retention-capable models count toward the
-  // recommendation — GPT-5.6+ (30m windows) must be ignored
-  const logRows = [
-    ...Array.from({ length: 7 }, (_, i) => ({
-      provider: "openai", model: "gpt-5.5", ts: new Date(now - i * 10 * MIN),
-    })),
-    ...Array.from({ length: 3 }, (_, i) => ({
-      provider: "openai", model: "gpt-5.6", ts: new Date(now - (i + 7) * 10 * MIN),
-    })),
-  ];
+  const logRows = Array.from({ length: 10 }, (_, i) => ({
+    provider: "openai", model: "gpt-5.5", ts: new Date(now - i * 10 * MIN),
+  }));
   const updates: string[] = [];
   const fakePool = {
     query: async (sql: string, params?: any[]) => {
@@ -102,28 +95,6 @@ test("adaptiveSweep turns on OpenAI 24h retention when the key has OpenAI traffi
       throw new Error("unexpected query: " + sql);
     },
   };
-  const changed = await adaptiveSweep(fakePool as any);
-  assert.equal(changed, 1);
-  assert.ok(updates[0].includes("openai_cache_retention"));
-});
-
-test("adaptiveSweep does NOT recommend 24h retention for GPT-5.6+-only traffic", async () => {
-  const now = Date.now();
-  const logRows = Array.from({ length: 10 }, (_, i) => ({
-    provider: "openai", model: "gpt-5.6-codex", ts: new Date(now - i * 10 * MIN),
-  }));
-  const updates: string[] = [];
-  const fakePool = {
-    query: async (sql: string) => {
-      if (sql.includes("FROM api_keys")) {
-        return { rows: [{ id: 4, anthropic_cache_ttl: "5m", openai_cache_retention: "default", keepalive_enabled: true }] };
-      }
-      if (sql.includes("FROM request_logs")) return { rows: logRows };
-      if (sql.startsWith("UPDATE api_keys")) { updates.push(sql); return { rows: [] }; }
-      if (sql.includes("INSERT INTO tuning_decisions")) return { rows: [] };
-      throw new Error("unexpected query: " + sql);
-    },
-  };
   assert.equal(await adaptiveSweep(fakePool as any), 0);
-  assert.equal(updates.length, 0, "5.6+ models live in 30m windows — no retention change");
+  assert.equal(updates.length, 0, "OpenAI needs no setting changes — the sweep adapts per model");
 });
