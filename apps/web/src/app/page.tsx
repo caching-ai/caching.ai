@@ -23,7 +23,6 @@ export default async function Landing() {
   const sess = await getSession();
 
   const personaThumbs = [<PersonaProductThumb key="p" />, <PersonaFleetThumb key="f" />, <PersonaLeaderThumb key="l" />];
-  const personaAccents = ["border-t-accent-blue", "border-t-accent-purple", "border-t-accent-orange"];
 
   const featureRows = [
     { data: d.featureDetail.analytics, tint: "bg-accent-blue/[0.07]", chip: "bg-accent-blue text-white", badge: null as string | null, thumb: <AnalyticsThumb t={d.features.thumb} /> },
@@ -340,7 +339,7 @@ export default async function Landing() {
         <h2 className="mx-auto mt-3 max-w-3xl whitespace-pre-line text-center text-display-lg text-ink">{d.personas.title}</h2>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {d.personas.items.map((p, i) => (
-            <div key={p.title} className={`card border-t-4 ${personaAccents[i]}`}>
+            <div key={p.title} className="card">
               {personaThumbs[i]}
               <h3 className="mt-5 text-[22px] font-medium text-ink">{p.title}</h3>
               <p className="mt-2 text-[15px] leading-relaxed text-body-mid">{p.desc}</p>
