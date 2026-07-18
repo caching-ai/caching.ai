@@ -123,8 +123,76 @@ export default async function Landing() {
         </div>
       </section>
 
-      {/* Who it's for */}
+      {/* Benchmark: measured results (BENCHMARK.md is the long-form source) */}
       <section className="mx-auto max-w-6xl px-6 py-20">
+        <p className="eyebrow text-center">{d.bench.eyebrow}</p>
+        <h2 className="mx-auto mt-3 max-w-3xl whitespace-pre-line text-center text-display-lg text-ink">{d.bench.title}</h2>
+        <p className="mx-auto mt-5 max-w-3xl text-center text-[17px] leading-relaxed text-body-mid [text-wrap:balance]">{d.bench.lead}</p>
+
+        <div className="mt-12 grid gap-6 lg:grid-cols-[3fr_2fr]">
+          {/* three-arm cost bars — S2 sparse support, claude-haiku-4.5 */}
+          <div className="card !p-8">
+            <h3 className="text-[15px] font-medium text-ink">{d.bench.chartTitle}</h3>
+            <div className="mt-7 flex flex-col gap-6">
+              {[
+                { label: d.bench.arms.direct, pct: 100, cls: "bg-ink/50", note: null as string | null, big: false },
+                { label: d.bench.arms.tuned, pct: 125, cls: "bg-accent-orange", note: d.bench.tunedFlag, big: false },
+                { label: d.bench.arms.us, pct: 33, cls: "bg-accent-green", note: d.bench.usFlag, big: true },
+              ].map((b) => (
+                <div key={b.label}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className={`text-[14.5px] ${b.big ? "font-semibold text-ink" : "text-body-mid"}`}>{b.label}</span>
+                    <span className={`font-mono leading-none ${b.big ? "text-[24px] font-semibold text-ink" : "text-[15px] text-body-mid"}`}>
+                      {b.pct}%
+                    </span>
+                  </div>
+                  <div className="mt-2 h-4 w-full overflow-hidden rounded-full bg-[#efefec]">
+                    <div className={`h-full rounded-full ${b.cls}`} style={{ width: `${(b.pct / 125) * 100}%` }} />
+                  </div>
+                  {b.note && <p className="mt-1.5 text-[13px] leading-snug text-mute">{b.note}</p>}
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-[13px] text-mute">{d.bench.chartNote}</p>
+          </div>
+          {/* headline stats */}
+          <div className="flex flex-col gap-6">
+            {d.bench.stats.map((s3) => (
+              <div key={s3.value} className="card flex flex-1 items-center gap-6 !p-6">
+                <div className="font-mono text-[42px] font-semibold leading-none text-ink">{s3.value}</div>
+                <div>
+                  <div className="text-[15.5px] font-medium text-ink">{s3.label}</div>
+                  <p className="mt-1 text-[13.5px] leading-relaxed text-body-mid">{s3.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="mx-auto mt-9 max-w-3xl text-center text-[15.5px] leading-relaxed text-body-mid [text-wrap:balance]">{d.bench.honesty}</p>
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a
+            href="https://github.com/caching-ai/caching.ai/blob/main/BENCHMARK.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary"
+          >
+            {d.bench.ctaFull}
+          </a>
+          <a
+            href="https://github.com/caching-ai/caching.ai/tree/main/bench"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary"
+          >
+            {d.bench.ctaRaw}
+          </a>
+        </div>
+        <p className="mt-4 text-center text-[13px] text-mute">{d.bench.date}</p>
+      </section>
+
+      {/* Who it's for */}
+      <section className="border-t border-hairline mx-auto max-w-6xl px-6 py-20">
         <p className="eyebrow text-center">{d.personas.eyebrow}</p>
         <h2 className="mx-auto mt-3 max-w-3xl whitespace-pre-line text-center text-display-lg text-ink">{d.personas.title}</h2>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
