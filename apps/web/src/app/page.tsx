@@ -91,12 +91,12 @@ export default async function Landing() {
         <img
           src="/hero-cache-warm.png"
           alt={`${d.hero.titleA} ${d.hero.titleB}`}
-          className="mx-auto mt-8 w-full max-w-4xl"
+          className="mx-auto mt-14 w-full max-w-4xl"
           width={1376}
           height={510}
         />
         {/* provider strip */}
-        <div className="mx-auto mt-6 flex max-w-3xl flex-col items-center gap-4">
+        <div className="mx-auto mt-12 flex max-w-3xl flex-col items-center gap-4">
           <span className="text-[13px] font-medium tracking-[1.5px] text-mute-soft">{d.providers.label}</span>
           <ProviderLogos />
         </div>

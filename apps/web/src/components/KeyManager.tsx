@@ -565,6 +565,11 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
                     )}
                   </div>
                 )}
+                {k.keepalive_enabled && (
+                  <p className="pl-7 text-[13.5px] leading-relaxed text-mute" data-testid="hold-hint">
+                    💬 {t.holdHint}
+                  </p>
+                )}
                 {k.keepalive_enabled && k.keepalive_hold_until &&
                   new Date(k.keepalive_hold_until) > new Date() && (
                   <div className="ml-7 inline-flex w-fit items-center gap-1.5 rounded-btn bg-accent-green/[0.12] px-2.5 py-1 text-[13px] font-medium text-ink"
