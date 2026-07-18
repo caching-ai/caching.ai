@@ -2,7 +2,7 @@ import type { Dict } from "./en";
 
 export const es: Dict = {
   meta: {
-    title: "Caching.ai - Ahorra con tu caché de IA",
+    title: "Caching.ai - Gestión automática de caché de IA",
     description:
       "Proxy drop-in para Anthropic, OpenAI y Gemini que protege, calienta y mide tu caché de prompts — para que el descuento del 90% que ya te corresponde aparezca de verdad en tu factura.",
   },
@@ -18,6 +18,18 @@ export const es: Dict = {
     note: "Un cambio de base URL · Paga el 20% de lo que ahorres · Si no ahorras, no pagas",
     mock: { wasted: "GASTO PERDIDO", saved: "AHORRADO", hitRate: "TASA DE ACIERTO" },
   },
+  visuals: {
+    lifeTitle: "La vida de una caché, en una línea",
+    lifeWarm: "caliente — cada repetición se lee a ~10% del precio de entrada",
+    lifeIdle: "≈5 minutos de inactividad",
+    lifeCold: "fría — vuelves a pagar el 100% sin darte cuenta",
+    lifeKeep: "caching.ai mantiene caliente este tramo, así el precio del 10% sigue aplicando",
+    flowApp: "Tu app",
+    flowProxy: "proxy caching.ai",
+    flowChips: ["inyectar breakpoints", "mantener caliente", "medir ahorro", "detectar rompe-cachés"],
+    flowProvider: "Anthropic · OpenAI · Gemini · Grok",
+    flowNote: "Cero cambios de código — solo cambias la base URL. Los streams pasan byte a byte.",
+  },
   problem: {
     eyebrow: "EL PROBLEMA",
     title: "El descuento del 90% es para todos.\nPero sus condiciones se rompen fácil.",
@@ -31,8 +43,8 @@ export const es: Dict = {
   },
   bench: {
     eyebrow: "MEDIDO, NO PROMETIDO",
-    title: "Hicimos 10,000+ llamadas reales a la API.\nEsto dijo la factura.",
-    lead: "Las mismas cargas de trabajo, de tres maneras: llamando al proveedor directamente, ajustando cache_control a mano, y pasando por caching.ai. Cada costo son los números de uso del propio proveedor a precios de lista públicos — y el método, el harness y todos los registros crudos son open source.",
+    title: "Hasta un 90% más barato que llamar directo.\nProbado en la factura.",
+    lead: "10,000+ llamadas reales y facturadas — las mismas cargas de trabajo en directo, ajustadas a mano y vía caching.ai, medidas sobre la factura. El método, el harness y los registros crudos son open source.",
     chartTitle: "Tráfico de soporte con pausas de 6–9 minutos · 12 llamadas · claude-haiku-4.5",
     arms: {
       direct: "Llamada directa (SDK por defecto)",
@@ -47,6 +59,13 @@ export const es: Dict = {
       { value: "89%", label: "ahorrado en un lote de 300 llamadas", desc: "Lote de clasificación con prefijo compartido, frente al mismo lote con el SDK por defecto." },
       { value: "90%", label: "ahorrado en GPT-5.6", desc: "La generación 5.6 dejó sin caché de prefijos al tráfico SDK normal (0% de aciertos) — el proxy lo restaura: 97,8% de aciertos en tráfico constante." },
     ],
+    latencyTitle: "Más rápido, no más lento",
+    latencyLead: "Un salto de proxy suena a latencia extra. Medido, es lo contrario: un acierto de caché se salta el prefill del prompt, así que los primeros tokens llegan antes — y el salto en sí fue menor que el ruido del proveedor.",
+    latencyDirect: "directo",
+    latencyProxy: "caching.ai",
+    latencyP50: "hasta el primer token — típico (p50)",
+    latencyP95: "hasta el primer token — picos (p95)",
+    latencyNote: "gpt-4o, tráfico de soporte disperso (S2), tiempos reportados por el proveedor. Menos es mejor.",
     honesty: "Cada cifra de arriba proviene de llamadas reales y facturadas a la API — el método, los fixtures y los registros crudos son públicos, y puedes reproducir el benchmark completo con tus propias claves. Donde el proveedor ya cachea bien por sí solo, el proxy simplemente deja pasar tu tráfico sin sobrecoste.",
     ctaFull: "Leer el benchmark completo",
     ctaRaw: "Método y registros crudos",
@@ -64,7 +83,7 @@ export const es: Dict = {
       body: "Inyección automática de cache_control y detección de rompe-cachés. Atrapamos el timestamp de tu system prompt que te está costando 10x en silencio.",
     },
     keepalive: {
-      name: "Keep-Alive",
+      name: "Calentador de caché",
       body: "Las cachés de los desarrolladores de modelos expiran tras 5 minutos de inactividad. Nuestro motor envía señales de calentamiento de bajísimo coste para mantener tu prefijo caliente exactamente mientras sea rentable — nunca más.",
     },
     thumb: {
@@ -129,7 +148,7 @@ export const es: Dict = {
       },
       {
         q: "¿Qué proveedores están soportados?",
-        a: "Los cuatro — analytics y detección de rompe-cachés en todos, con optimización solo donde está medido que compensa: cache_control automático y calentamiento Keep-Alive en Anthropic, y en GPT-5.6+ un breakpoint de caché explícito más un prompt_cache_key estable que restauran el cacheo de prefijos que los nuevos modelos ya no hacen solos (verificado en vivo: 0% → 99,6% de aciertos). OpenAI, Gemini y Grok conservan sus cachés en el propio proveedor — medimos las señales de calentamiento allí y las apagamos en lugar de cobrártelas.",
+        a: "Los cuatro — analytics y detección de rompe-cachés en todos, con optimización solo donde está medido que compensa: cache_control automático y el Calentador de caché en Anthropic, y en GPT-5.6+ un breakpoint de caché explícito más un prompt_cache_key estable que restauran el cacheo de prefijos que los nuevos modelos ya no hacen solos (verificado en vivo: 0% → 99,6% de aciertos). OpenAI, Gemini y Grok conservan sus cachés en el propio proveedor — medimos las señales de calentamiento allí y las apagamos en lugar de cobrártelas.",
       },
       {
         q: "¿Cuánto cuesta?",
@@ -151,7 +170,7 @@ export const es: Dict = {
   },
   oss: {
     eyebrow: "CÓDIGO ABIERTO",
-    title: "Un mismo núcleo, dos formas de usarlo",
+    title: "El código es todo público.\nHazlo funcionar tú, o déjanoslo a nosotros.",
     sub: "El núcleo de Caching.ai es open source (Apache-2.0). Autoaloja el mismo proxy y consola en tu infraestructura — o usa la nube y olvídate de los servidores.",
     commonT: "Idéntico en ambos",
     common: ["Proxy, cache_control automático y calentamiento", "Detección y diagnóstico de rompedores de caché", "Panel y consola de claves"],
@@ -195,6 +214,23 @@ export const es: Dict = {
   },
   console: {
     nav: { dashboard: "Panel", keys: "Claves API", billing: "Facturación", docs: "Docs", signOut: "Cerrar sesión" },
+    onboarding: {
+      title: "Empieza a ahorrar en 2 minutos",
+      sub: "Cuatro pasos — después, cada petición ahorra sola.",
+      dismiss: "Ocultar",
+      s1t: "Registra una clave de proveedor",
+      s1b: "Anthropic, OpenAI, Gemini o Grok — se guarda cifrada y solo se usa para reenviar tu tráfico.",
+      s1cta: "Registrar",
+      s2t: "Crea tu clave ck_ (Piloto automático activado)",
+      s2b: "Una clave que sustituye a la del proveedor en tu app. El ahorro corre solo, dentro de un presupuesto de $1/día.",
+      s2cta: "Crear clave",
+      s3t: "Conecta tu app o herramienta",
+      s3b: "Solo cambias una base URL. Claude Code, Codex, Cursor, cada SDK — guías de copiar y pegar.",
+      s3cta: "Abrir guía",
+      s4t: "Envía una petición y compruébalo",
+      s4b: "Desde la primera llamada el panel muestra aciertos, dólares ahorrados y lo que aún se escapa.",
+      s4cta: "Panel",
+    },
     account: {
       delete: "Eliminar cuenta",
       deleteConfirm: "¿Eliminar tu cuenta? Todas las claves API dejarán de funcionar de inmediato y se borrarán tus claves de proveedor, los prefijos de caché guardados y tu tarjeta.",
@@ -210,6 +246,7 @@ export const es: Dict = {
     tips: {
       ckKey: "Esta es la clave que pones en tu app, justo donde antes iba la clave del proveedor. Nosotros nos ponemos en medio y cuidamos tu caché.",
       providerKeys: "Tus propias claves de los proveedores de IA (Anthropic, OpenAI…). Regístralas una vez y todas las claves de Caching.ai que crees las usarán automáticamente. Se guardan cifradas y solo se usan para reenviar tus peticiones.",
+      autopilot: "Un interruptor que lo hace todo: se inyectan los breakpoints que falten, tu caché se mantiene caliente mientras salga más barato que reconstruirla, y los ajustes se recalibran cuando cambia tu tráfico. El gasto de calentamiento se queda dentro del presupuesto diario. Si lo apagas, esta clave solo mide.",
       autoCache: "La parte que se repite en cada petición (como un system prompt largo) se procesa por una fracción del precio si se marca como cacheable. Con esto activado, añadimos esa marca a las peticiones que la olvidaron. Las que ya usan caché nunca se tocan.",
       keepalive: "La caché de Anthropic desaparece tras ~5 minutos de inactividad. Con esto activado, enviamos una \"señal de calentamiento\" diminuta de 1 token justo antes de que expire para mantenerla caliente — solo Anthropic: medimos los demás proveedores y sus cachés sobreviven solas a la inactividad, así que las señales allí solo quemarían tu presupuesto. Una señal de calentamiento cuesta mucho menos que reconstruir la caché.",
       budget: "Lo máximo que gastaremos en señales de calentamiento de calentamiento al día. Al alcanzarlo, los señales de calentamiento paran hasta mañana.",
@@ -258,11 +295,13 @@ export const es: Dict = {
         ping: "señal",
         warm: "sigue caliente",
       },
-      retention: {
-        title: "Retención 24h de OpenAI",
-        caption: "OpenAI guarda la caché hasta 24 horas por sí mismo — no hacen falta señales de calentamiento.",
-        held: "caché guardada por OpenAI",
-        noPing: "sin señales de calentamiento",
+      restore: {
+        title: "Restauración de caché GPT-5.6",
+        caption: "GPT-5.6 solo empareja en breakpoints, así que el tráfico SDK normal acierta 0%. El proxy inyecta el breakpoint y una clave estable — 97,8% medido.",
+        naive: "SDK por defecto, directo",
+        via: "vía caching.ai",
+        hit0: "0% aciertos",
+        hit978: "97,8% aciertos",
       },
     },
     dash: {
@@ -328,7 +367,7 @@ export const es: Dict = {
       nameHelp: "Elige un nombre que reconozcas luego — la app o el entorno que la usará.",
       modeLabel: "Modo de la clave",
       modeOptimize: "Optimizar (recomendado)",
-      modeOptimizeDesc: "Mide y mejora: se añaden los breakpoints de caché que falten y se estabiliza el enrutado. Las peticiones que ya usan caché nunca se tocan.",
+      modeOptimizeDesc: "Piloto automático: conecta la clave y maximizamos el ahorro solos — inyección, calentamiento y ajuste, dentro de un presupuesto de seguridad de $1/día. Las peticiones que ya usan caché nunca se tocan.",
       modeObserve: "Solo observar",
       modeObserveDesc: "Medimos y diagnosticamos sin modificar jamás una petición — los bytes pasan intactos. Ideal para probar sin riesgo; activa las optimizaciones después, por clave.",
       observeBadge: "SOLO OBSERVAR",
@@ -341,6 +380,7 @@ export const es: Dict = {
       createdBadge: "CLAVE CREADA — CÓPIALA AHORA",
       createdBody: "Esta es la única vez que mostraremos la clave completa. Guárdala en un lugar seguro.",
       copy: "Copiar",
+      toolsGuide: "¿Usas Claude Code, Codex, Cursor, Cline…? Guía de conexión por herramienta →",
       copySnippet: "Copiar snippet",
       created: "creada",
       revoked: "revocada",
@@ -354,11 +394,15 @@ export const es: Dict = {
       optionalProvider: "Opcional — añádela para enrutar tráfico de {label} por el proxy.",
       save: "Guardar",
       providerNotes: {
-        anthropic: "Analytics · cache_control automático · calentamiento Keep-Alive.",
+        anthropic: "Analytics · cache_control automático · el Calentador de caché.",
         openai: "Analytics · restauración de caché GPT-5.6+ (breakpoint + clave estable) · detección de rompe-cachés.",
         gemini: "Analytics · detección de rompe-cachés · medición de caché implícita.",
         grok: "Analytics · detección de rompe-cachés · medición exacta incluso del reasoning (API compatible con OpenAI).",
       },
+      autopilotTitle: "Piloto automático — ahorro máximo, solo",
+      autopilotBody: "Conecta la clave y listo. Combinamos inyección de caché, calentamiento y ajuste de configuración por nuestra cuenta, siempre dentro de un pequeño presupuesto diario de seguridad ($1 por defecto), y cada dólar ahorrado aparece en el panel.",
+      autopilotCustom: "Configuración personalizada en uso — mira los ajustes avanzados abajo",
+      advancedToggle: "Avanzado: ajustar el caché a mano",
       autoCacheTitle: "Auto cache_control",
       autoCacheBody: "Inyecta breakpoints de caché en peticiones que no tienen ninguno. Las peticiones que ya usan caché nunca se tocan.",
       keepaliveTitle: "Motor Keep-Alive",
@@ -480,7 +524,7 @@ export const es: Dict = {
       ],
     },
     keepalive: {
-      name: "Keep-Alive",
+      name: "Calentador de caché",
       headline: "Mantén la caché caliente entre llamadas",
       tagline: "Las cachés de Anthropic expiran tras 5 minutos de inactividad. Nuestro motor envía señales de calentamiento de 1 token para mantener tu prefijo caliente exactamente mientras sea rentable — nunca más, y solo donde nuestro propio benchmark demostró que las señales compensan.",
       bullets: [
@@ -541,6 +585,20 @@ export const es: Dict = {
     alsoT: "También en OpenAI, Gemini y Grok",
     alsoB: "Con una clave de OpenAI, Gemini o Grok registrada en tu cuenta, apunta esos SDKs al mismo proxy. OpenAI cachea automáticamente prefijos estables de 1.024+ tokens y Gemini factura las cachés de contexto a una fracción del precio de entrada — lo medimos todo, calculamos el ahorro y te avisamos cuando un prefijo inestable desactiva la caché en silencio. Grok (xAI) habla el formato de OpenAI: envíalo al mismo endpoint y los modelos grok-* se enrutan solos; además inyectamos una cabecera estable x-grok-conv-id para subir los aciertos de caché — nunca tocamos una que envíes tú.",
     alsoNote: "En peticiones OpenAI en streaming añadimos stream_options.include_usage si falta, para poder medir el uso — tu contenido no se toca. /v1/completions y /v1/embeddings pasan igual, con la misma medición.",
+    connectT: "Conecta cualquier herramienta — recetas de copiar y pegar",
+    connectB: "Casi cualquier herramienta de IA apunta al proxy cambiando una sola base URL. Elige la tuya abajo — la clave ck_ va donde antes iba la clave del proveedor.",
+    connectNotes: {
+      claudeCode: "Soportado oficialmente vía settings o variables de entorno. La primera ejecución interactiva pide aprobar la clave personalizada una vez.",
+      codex: "Codex habla la Responses API — el proxy la soporta de forma nativa, así que funciona sin más.",
+      cline: "Ambas extensiones tienen campo oficial de base URL personalizada por proveedor.",
+      aider: "Los modelos de ruta OpenAI necesitan el prefijo openai/. Para Anthropic pon la URL RAÍZ — litellm añade /v1/messages por sí solo.",
+      geminiCli: "Aplica en el modo de autenticación gemini-api-key (no con login de Google). Reinicia la CLI tras el cambio.",
+      llamaindex: "OpenAILike evita la validación estricta del nombre de modelo; la clase Anthropic acepta base_url directamente.",
+      aisdk: "Ojo a las rutas distintas: /v1 para OpenAI y Anthropic, /v1beta para Google.",
+      agents: "Enruta el agente por un cliente de chat-completions y desactiva la subida de tracing (necesitaría una clave sk- real).",
+      cursor: "Funciona, con límites que pone el propio Cursor: el override de base URL es solo de UI, las peticiones pasan por servidores de Cursor y el autocompletado Tab sigue en sus modelos.",
+    },
+    connectFootnote: "Windsurf hoy no tiene opción de base URL personalizada en su BYOK, así que no puede enrutar por ningún proxy. El proxy acepta los tres estilos de autenticación (Authorization: Bearer, x-api-key, x-goog-api-key) — el que envíe tu herramienta.",
     s3t: "3. Mira el panel",
     s3b: "Cada petición reporta ahora su tasa de acierto, ahorro estimado y desperdicio estimado a tu panel — además de percentiles de latencia P50/P95, un mapa de calor de tráfico por día y hora, una nota de salud de caché, el ahorro mensual proyectado y una exportación CSV en bruto, sobre ventanas de 7 / 30 / 90 días. El streaming (SSE) pasa sin buffering; el uso se lee del stream al vuelo.",
     whatT: "Qué hace el proxy",
@@ -548,7 +606,7 @@ export const es: Dict = {
       { t: "Analytics", b: "Registra tokens de uso, latencia y estado por petición — los cuerpos de peticiones y respuestas nunca se almacenan. El panel añade percentiles de latencia, mapa de calor de tráfico, nota de caché, proyecciones de ahorro y exportación CSV." },
       { t: "Auto cache_control", b: "Si una petición no tiene ningún breakpoint de caché, los añadimos al último bloque de sistema y a la última tool — con el TTL de caché que elijas por clave (5 minutos, o 1 hora con escritura a 2×). Las peticiones que ya usan caché nunca se modifican." },
       { t: "Detección de rompe-cachés", b: "Si tu system prompt o tu lista de tools cambia de hash en cada petición, lo marcamos en el panel con la causa probable." },
-      { t: "Keep-Alive (opt-in)", b: "Recalienta tu prefijo con señales de calentamiento de max_tokens 1 mientras la reutilización siga siendo rentable — 62,5 minutos con el TTL de 5 m, unas 20 horas con el TTL de 1 h de Anthropic — dentro de un presupuesto diario que tú controlas. Solo Anthropic, por medición: los demás proveedores conservan sus cachés solos, así que las señales allí solo queman presupuesto. ¿Te ausentas? Escribe cai:hold 2h (o simplemente «mantén mi caché caliente 2 horas») como mensaje de chat — el proxy responde por sí mismo, nada llega a la IA, y el calentamiento se mantiene durante esa ventana; las retenciones largas se sirven con UNA escritura de caché de 1 hora en vez de una ristra de señales — la opción más barata para la ventana que pediste." },
+      { t: "Calentador de caché (opt-in)", b: "Recalienta tu prefijo con señales de calentamiento de max_tokens 1 mientras la reutilización siga siendo rentable — 62,5 minutos con el TTL de 5 m, unas 20 horas con el TTL de 1 h de Anthropic — dentro de un presupuesto diario que tú controlas. Solo Anthropic, por medición: los demás proveedores conservan sus cachés solos, así que las señales allí solo queman presupuesto. ¿Te ausentas? Escribe cai:hold 2h (o simplemente «mantén mi caché caliente 2 horas») como mensaje de chat — el proxy responde por sí mismo, nada llega a la IA, y el calentamiento se mantiene durante esa ventana; las retenciones largas se sirven con UNA escritura de caché de 1 hora en vez de una ristra de señales — la opción más barata para la ventana que pediste." },
       { t: "Ajuste de caché por proveedor", b: "Por clave: TTL de caché de Anthropic (5 m/1 h), restauración de caché en GPT-5.6+ (los nuevos modelos solo emparejan en breakpoints, así que los prefijos compartidos sin tratar obtienen 0% de aciertos entre peticiones — inyectamos un breakpoint explícito y un prompt_cache_key estable para recuperarlos) y enrutado estable de conversación con x-grok-conv-id en Grok. Gemini 2.5+ cachea de forma implícita, sin ajustes; nosotros lo medimos, y las cachés explícitas de Gemini están en el roadmap. En la nube, el modo de auto-ajuste aprende el patrón de cada clave y elige estos ajustes por ti." },
       { t: "Informe semanal de ahorro", b: "Un email por semana, solo en semanas con tráfico: dinero ahorrado, dinero que aún se pierde y el cambio de prompt que más ayudaría." },
       { t: "Alerta de presupuesto", b: "Si el gasto de calentamiento de una clave alcanza su presupuesto diario, el calentamiento descansa hasta la medianoche UTC y recibes un correo — nunca más de uno al día." },

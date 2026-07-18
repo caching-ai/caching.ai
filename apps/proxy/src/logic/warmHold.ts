@@ -165,7 +165,7 @@ const REPLIES: Record<HoldLang, Record<HoldOutcome, (d: string) => string>> = {
     held: (d) =>
       `🔥 캐시 워밍을 지금부터 ${d} 동안 유지할게요. 자리를 비우셔도 캐시가 식지 않아요. 일일 워밍 예산 안에서만 동작하고, 예산에 닿으면 메일로 알려드려요.`,
     keepalive_off: () =>
-      `이 키는 캐시 워밍(keep-alive)이 꺼져 있어서 홀드를 걸 수 없어요. 콘솔 > 키 설정에서 캐시 워밍을 켠 뒤 다시 말해 주세요.`,
+      `이 키는 캐시 워머가 꺼져 있어서 홀드를 걸 수 없어요. 콘솔 > 키 설정에서 캐시 워머를 켠 뒤 다시 말해 주세요.`,
     no_prefix: () =>
       `아직 워밍할 대화가 저장돼 있지 않아요. 일반 요청을 한 번 보낸 뒤 다시 말해 주시면 그 대화의 캐시를 지켜드릴게요.`,
   },
@@ -173,7 +173,7 @@ const REPLIES: Record<HoldLang, Record<HoldOutcome, (d: string) => string>> = {
     held: (d) =>
       `🔥 Holding your cache warm for ${d} from now. Step away — it won't go cold. Warming stays within your daily budget; you'll get an email if it's reached.`,
     keepalive_off: () =>
-      `Keep-alive is off for this key, so a hold can't be set. Enable cache warming in Console > key settings, then ask again.`,
+      `The Cache Warmer is off for this key, so a hold can't be set. Enable it in Console > key settings, then ask again.`,
     no_prefix: () =>
       `There's no saved conversation to keep warm yet. Send one normal request first, then ask again.`,
   },
@@ -181,7 +181,7 @@ const REPLIES: Record<HoldLang, Record<HoldOutcome, (d: string) => string>> = {
     held: (d) =>
       `🔥 これから${d}、キャッシュを保温し続けます。席を外しても冷めません。1日の保温予算内でのみ動作し、上限に達したらメールでお知らせします。`,
     keepalive_off: () =>
-      `このキーはキャッシュ保温（keep-alive）がオフのため、ホールドを設定できません。コンソール > キー設定で保温をオンにしてから、もう一度どうぞ。`,
+      `このキーはキャッシュウォーマーがオフのため、ホールドを設定できません。コンソール > キー設定でオンにしてから、もう一度どうぞ。`,
     no_prefix: () =>
       `保温できる会話がまだ保存されていません。通常のリクエストを一度送ってから、もう一度どうぞ。`,
   },
@@ -189,7 +189,7 @@ const REPLIES: Record<HoldLang, Record<HoldOutcome, (d: string) => string>> = {
     held: (d) =>
       `🔥 Mantendré tu caché caliente durante ${d} a partir de ahora. Puedes ausentarte — no se enfriará. El calentamiento respeta tu presupuesto diario; te avisaremos por correo si se alcanza.`,
     keepalive_off: () =>
-      `El keep-alive está desactivado para esta clave, así que no se puede fijar la retención. Actívalo en Consola > ajustes de la clave y vuelve a pedirlo.`,
+      `El Calentador de caché está desactivado para esta clave, así que no se puede fijar la retención. Actívalo en Consola > ajustes de la clave y vuelve a pedirlo.`,
     no_prefix: () =>
       `Aún no hay ninguna conversación guardada que mantener caliente. Envía primero una petición normal y vuelve a pedirlo.`,
   },
@@ -197,7 +197,7 @@ const REPLIES: Record<HoldLang, Record<HoldOutcome, (d: string) => string>> = {
     held: (d) =>
       `🔥 从现在起为你保温缓存 ${d}。放心离开 — 缓存不会冷掉。保温只在每日预算内进行，达到上限会邮件通知你。`,
     keepalive_off: () =>
-      `这把密钥的缓存保温（keep-alive）是关闭的，无法设置保温锁定。请在控制台 > 密钥设置里开启后再试一次。`,
+      `这把密钥的缓存保温是关闭的，无法设置保温锁定。请在控制台 > 密钥设置里开启后再试一次。`,
     no_prefix: () =>
       `还没有可保温的对话。先发送一次正常请求，然后再说一次。`,
   },

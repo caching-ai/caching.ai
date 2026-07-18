@@ -31,13 +31,17 @@ export async function POST(req: Request) {
   }
   const raw = generateApiKey();
   const display = raw.slice(0, 11) + "…" + raw.slice(-4);
+  // optimize = Autopilot preset: injection + warming + (cloud) auto-tune all
+  // on, within the default $1/day warming budget — attach the key and savings
+  // are maximized with zero configuration.
   // observe = shadow preset: meter and diagnose only, never modify a request.
-  // Keep-alive and auto-tune already default to off; injection is the one flag
-  // to clear. Flip any switch on later and the key leaves observe mode.
+  const autopilot = mode !== "observe";
+  const tuning = autopilot && process.env.CACHING_CLOUD === "1" ? "auto" : "manual";
   const { rows } = await db().query(
-    `INSERT INTO api_keys(user_id, name, key_hash, key_prefix_display, auto_cache_control)
-     VALUES($1,$2,$3,$4,$5) RETURNING id, name, key_prefix_display, created_at`,
-    [sess.uid, (name || "default").slice(0, 64), sha256Hex(raw), display, mode !== "observe"]
+    `INSERT INTO api_keys(user_id, name, key_hash, key_prefix_display,
+                          auto_cache_control, keepalive_enabled, cache_tuning_mode)
+     VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id, name, key_prefix_display, created_at`,
+    [sess.uid, (name || "default").slice(0, 64), sha256Hex(raw), display, autopilot, autopilot, tuning]
   );
   // plaintext returned exactly once
   return NextResponse.json({ key: rows[0], plaintext: raw });

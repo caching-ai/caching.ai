@@ -132,21 +132,26 @@ export default function CacheVisualGuide() {
             </div>
           </Panel>
 
-          {/* 4 — OpenAI 24h retention: provider holds the cache, zero pings */}
-          <Panel title={g.retention.title} caption={g.retention.caption}>
+          {/* 4 — GPT-5.6 restore: naive SDK traffic 0% hits, proxy 97.8% */}
+          <Panel title={g.restore.title} caption={g.restore.caption}>
             <div className="flex flex-col gap-3" aria-hidden>
               <div>
                 <div className="mb-1 flex justify-between text-[10px] text-mute">
-                  <span>{g.retention.held}</span>
-                  <span className="rounded bg-[#00d722]/15 px-1.5 py-0.5 font-mono font-semibold text-[#008a16]">24h</span>
+                  <span>{g.restore.naive}</span>
+                  <span className="text-error">✕ {g.restore.hit0}</span>
                 </div>
                 <Track>
-                  <div className="h-2 w-full rounded-full bg-[#00d722]/60" />
+                  <div className="h-2 w-[3%] rounded-full bg-[#c8cdd4]" />
                 </Track>
               </div>
-              <div className="flex items-center gap-2 border-t border-hairline pt-2.5">
-                <span className="font-mono text-[11px] text-mute line-through">● ● ●</span>
-                <span className="text-[11px] text-mute">{g.retention.noPing}</span>
+              <div>
+                <div className="mb-1 flex justify-between text-[10px] text-mute">
+                  <span>{g.restore.via}</span>
+                  <span className="text-[#008a16]">✓ {g.restore.hit978}</span>
+                </div>
+                <Track>
+                  <div className="h-2 w-[97%] rounded-full bg-[#00d722]/70" />
+                </Track>
               </div>
             </div>
           </Panel>

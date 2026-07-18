@@ -521,7 +521,7 @@ test("warm hold: anthropic command intercepted, hold set, nothing forwarded", as
       messages: [{ role: "user", content: "cai:hold 2h" }] }),
   });
   const j2 = await res2.json();
-  assert.match(j2.content[0].text, /Keep-alive is off/);
+  assert.match(j2.content[0].text, /Cache Warmer is off/);
   const after = await pool.query("SELECT keepalive_hold_until FROM api_keys WHERE id=$1", [k.rows[0].id]);
   assert.equal(after.rows[0].keepalive_hold_until, null);
   await pool.query("UPDATE api_keys SET keepalive_enabled=true WHERE id=$1", [k.rows[0].id]);

@@ -35,7 +35,7 @@ discount actually land:
   `prompt_cache_breakpoint` plus a STABLE `prompt_cache_key`, verified live
   0% → 99.6% prefix hits), and cache-breaker detection with the likely root
   cause (timestamps, random IDs, reordered tools).
-- **Keep-alive warming** *(opt-in per key, Anthropic only — by design)* —
+- **Cache Warmer** *(keep-alive; opt-in per key, Anthropic only — by design)* —
   1-token pings re-warm your prefix exactly while re-use is economical (up to
   62.5 min), within a daily budget you control. Other providers hold their
   caches upstream on their own (we measured — [BENCHMARK.md](BENCHMARK.md)),
@@ -97,6 +97,24 @@ daily warming budget still applies. The console shows a
 | Get started | [caching.ai](https://caching.ai) — 2 minutes | `docker compose up` below |
 
 If we save you nothing, you pay nothing — that's the whole pricing model.
+
+## What the hosted cloud adds
+
+Self-hosting gives you the full proxy. The cloud adds the parts that are
+hard to run yourself:
+
+- **Auto-Tune** *(cloud-only — [`ee/`](ee/README.md))*: learns each key's
+  real call rhythm and keeps re-picking the cheapest cache settings as your
+  traffic changes. The "set it and forget it" layer on top of Autopilot.
+- **Verified-savings billing**: we meter what you actually saved — net of
+  every warming ping — and charge 20% of that. Under $5/month is waived.
+  Save nothing, pay nothing.
+- **Reports wired out of the box**: the weekly savings email and daily
+  budget alerts just arrive (self-host needs your own Resend key).
+- **Zero ops**: proxy fleet, warming daemon, Postgres, migrations, and every
+  upgrade in this changelog are our pager, not yours.
+- **2 minutes to first savings**: [caching.ai](https://caching.ai) → register
+  your provider keys → swap one base URL.
 
 ## Self-hosting
 

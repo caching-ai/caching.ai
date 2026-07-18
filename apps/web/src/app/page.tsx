@@ -128,6 +128,28 @@ export default async function Landing() {
               </div>
             ))}
           </div>
+          {/* cache lifecycle, as one visual line */}
+          <div className="mx-auto mt-12 max-w-4xl rounded-card border border-hairline bg-white p-6">
+            <div className="text-[14px] font-medium text-ink">{d.visuals.lifeTitle}</div>
+            <div className="mt-4 flex items-center gap-2">
+              <div className="flex h-9 flex-[3] items-center justify-center rounded-btn bg-accent-green/15 px-2 text-[12.5px] font-medium text-[#046a12]">
+                🔥 <span className="ml-1.5 hidden truncate sm:inline">{d.visuals.lifeWarm}</span>
+              </div>
+              <div className="flex flex-col items-center px-1 text-center">
+                <span aria-hidden className="text-mute">⏱</span>
+                <span className="whitespace-nowrap text-[11.5px] text-mute">{d.visuals.lifeIdle}</span>
+              </div>
+              <div className="flex h-9 flex-[3] items-center justify-center rounded-btn bg-error/10 px-2 text-[12.5px] font-medium text-error">
+                🧊 <span className="ml-1.5 hidden truncate sm:inline">{d.visuals.lifeCold}</span>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-2 text-[13px] text-[#046a12]">
+              <div className="h-1.5 flex-1 rounded-full bg-accent-green" />
+              <span className="shrink-0 font-medium">{d.visuals.lifeKeep}</span>
+              <div className="h-1.5 flex-1 rounded-full bg-accent-green" />
+            </div>
+            <p className="mt-3 text-[13px] leading-relaxed text-mute sm:hidden">{d.visuals.lifeWarm} → {d.visuals.lifeCold}</p>
+          </div>
           <p className="mt-10 text-center text-[17px] font-medium text-ink">{d.problem.closing}</p>
         </div>
       </section>
@@ -136,7 +158,7 @@ export default async function Landing() {
       <section id="benchmark" className="mx-auto max-w-6xl px-6 py-20">
         <p className="eyebrow text-center">{d.bench.eyebrow}</p>
         <h2 className="mx-auto mt-3 max-w-3xl whitespace-pre-line text-center text-display-lg text-ink">{d.bench.title}</h2>
-        <p className="mx-auto mt-5 max-w-3xl text-center text-[17px] leading-relaxed text-body-mid [text-wrap:balance]">{d.bench.lead}</p>
+        <p className="mx-auto mt-5 max-w-3xl whitespace-pre-line text-center text-[17px] leading-relaxed text-body-mid [text-wrap:balance]">{d.bench.lead}</p>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[3fr_2fr]">
           {/* three-arm cost bars — S2 sparse support, claude-haiku-4.5 */}
@@ -178,10 +200,42 @@ export default async function Landing() {
           </div>
         </div>
 
+        {/* latency: cache hits skip prefill — measured TTFT, gpt-4o S2 */}
+        <div className="mx-auto mt-8 max-w-4xl rounded-card border border-hairline bg-white p-7">
+          <h3 className="text-[17px] font-semibold text-ink">⚡ {d.bench.latencyTitle}</h3>
+          <p className="mt-2 text-[15px] leading-relaxed text-body-mid">{d.bench.latencyLead}</p>
+          <div className="mt-6 flex flex-col gap-5">
+            {[
+              { label: d.bench.latencyP50, a: 865, c: 597 },
+              { label: d.bench.latencyP95, a: 2067, c: 755 },
+            ].map((row) => (
+              <div key={row.label}>
+                <div className="text-[13.5px] font-medium text-body-mid">{row.label}</div>
+                {[
+                  { who: d.bench.latencyDirect, ms: row.a, cls: "bg-ink/50", strong: false },
+                  { who: d.bench.latencyProxy, ms: row.c, cls: "bg-accent-green", strong: true },
+                ].map((b) => (
+                  <div key={b.who} className="mt-1.5 flex items-center gap-3">
+                    <span className="w-24 shrink-0 text-[13px] text-mute">{b.who}</span>
+                    <div className="relative h-4 flex-1 rounded-full bg-[#f1f1f1]">
+                      <div className={`h-4 rounded-full ${b.cls}`} style={{ width: `${Math.round((b.ms / 2067) * 100)}%` }} />
+                    </div>
+                    <span className={`w-20 shrink-0 text-right font-mono text-[13.5px] ${b.strong ? "font-semibold text-[#046a12]" : "text-body-mid"}`}>
+                      {b.ms.toLocaleString()} ms
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-[12.5px] text-mute">{d.bench.latencyNote}</p>
+        </div>
+
         <p className="mx-auto mt-9 max-w-3xl text-center text-[15.5px] leading-relaxed text-body-mid [text-wrap:balance]">{d.bench.honesty}</p>
+        {/* localized doc targets: BENCHMARK.ko.md etc. exist for every product locale */}
         <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a
-            href="https://github.com/caching-ai/caching.ai/blob/main/BENCHMARK.md"
+            href={`https://github.com/caching-ai/caching.ai/blob/main/BENCHMARK${locale === "en" ? "" : `.${locale}`}.md`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary"
@@ -189,7 +243,9 @@ export default async function Landing() {
             {d.bench.ctaFull}
           </a>
           <a
-            href="https://github.com/caching-ai/caching.ai/tree/main/bench"
+            href={locale === "en"
+              ? "https://github.com/caching-ai/caching.ai/tree/main/bench"
+              : `https://github.com/caching-ai/caching.ai/blob/main/bench/README.${locale}.md`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-secondary"
@@ -268,6 +324,28 @@ export default async function Landing() {
       <section className="mx-auto max-w-6xl px-6 py-20">
         <p className="eyebrow text-center">{d.how.eyebrow}</p>
         <h2 className="mt-3 text-center text-display-lg text-ink">{d.how.title}</h2>
+        {/* where the proxy sits, at a glance */}
+        <div className="mx-auto mt-10 max-w-4xl rounded-card border border-hairline bg-white p-6">
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-btn border border-hairline bg-canvas px-4 text-[14.5px] font-medium text-ink">
+              {d.visuals.flowApp}
+            </div>
+            <div className="self-center text-[18px] text-mute" aria-hidden>→</div>
+            <div className="flex-[2] rounded-btn border-2 border-ink bg-[#fafafa] px-4 py-3 text-center">
+              <div className="text-[14.5px] font-semibold text-ink">🔥 {d.visuals.flowProxy}</div>
+              <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                {d.visuals.flowChips.map((c) => (
+                  <span key={c} className="rounded-full bg-accent-green/15 px-2.5 py-0.5 text-[12px] font-medium text-[#046a12]">{c}</span>
+                ))}
+              </div>
+            </div>
+            <div className="self-center text-[18px] text-mute" aria-hidden>→</div>
+            <div className="flex min-h-[56px] flex-1 items-center justify-center rounded-btn border border-hairline bg-canvas px-4 text-center text-[13.5px] font-medium text-body-mid">
+              {d.visuals.flowProvider}
+            </div>
+          </div>
+          <p className="mt-4 text-center text-[13px] text-mute">{d.visuals.flowNote}</p>
+        </div>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {[
             ["1", d.how.s1t, d.how.s1b],

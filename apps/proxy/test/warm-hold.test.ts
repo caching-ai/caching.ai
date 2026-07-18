@@ -83,7 +83,7 @@ test("natural Japanese / Spanish / Chinese", () => {
   // replies come back in the same language
   assert.match(holdReplyText("held", 2 * H, "ja"), /2時間/);
   assert.match(holdReplyText("held", 2 * H, "zh"), /2小时/);
-  assert.match(holdReplyText("keepalive_off", 2 * H, "es"), /keep-alive/i);
+  assert.match(holdReplyText("keepalive_off", 2 * H, "es"), /Calentador de caché/i);
 });
 
 test("responses / gemini body extraction", () => {

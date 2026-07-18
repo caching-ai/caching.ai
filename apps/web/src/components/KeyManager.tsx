@@ -6,6 +6,7 @@ import Tip from "./Tooltip";
 import { useConfirm } from "./ConfirmDialog";
 import { useFx } from "@/lib/fx";
 import CacheVisualGuide from "./CacheVisualGuide";
+import OnboardingChecklist from "./OnboardingChecklist";
 
 interface KeyRow {
   id: number;
@@ -55,23 +56,29 @@ client = anthropic.Anthropic(
 )`,
     },
     openai: {
-      curl: `curl ${proxyUrl}/v1/chat/completions \\
+      curl: `# Responses API (the current default — Codex, AI SDK, Agents SDK)
+curl ${proxyUrl}/v1/responses \\
   -H "content-type: application/json" \\
   -H "Authorization: Bearer ${ck}" \\
-  -d '{"model":"gpt-4o-mini",
-       "messages":[{"role":"user","content":"Hello"}]}'`,
+  -d '{"model":"gpt-5.6-terra","input":"Hello"}'
+
+# chat/completions works identically — same base URL`,
       ts: `import OpenAI from "openai";
 
 const client = new OpenAI({
   baseURL: "${proxyUrl}/v1",
   apiKey: "${ck}",
-});`,
+});
+// Responses API (default) — chat.completions works too
+const res = await client.responses.create({ model: "gpt-5.6-terra", input: "Hello" });`,
       py: `from openai import OpenAI
 
 client = OpenAI(
     base_url="${proxyUrl}/v1",
     api_key="${ck}",
-)`,
+)
+# Responses API (default) — chat.completions works too
+res = client.responses.create(model="gpt-5.6-terra", input="Hello")`,
     },
     gemini: {
       curl: `curl "${proxyUrl}/v1beta/models/gemini-2.5-flash:generateContent" \\
@@ -95,7 +102,7 @@ client = genai.Client(
       curl: `curl ${proxyUrl}/v1/chat/completions \\
   -H "content-type: application/json" \\
   -H "Authorization: Bearer ${ck}" \\
-  -d '{"model":"grok-4",
+  -d '{"model":"grok-4.5",
        "messages":[{"role":"user","content":"Hello"}]}'`,
       ts: `import OpenAI from "openai";
 
@@ -163,6 +170,9 @@ function Snippet({ proxyUrl, plaintext }: { proxyUrl: string; plaintext: string 
         onClick={() => navigator.clipboard.writeText(snippets[prov][tab]).catch(() => {})}>
         {dict.console.keys.copySnippet}
       </button>
+      <p className="mt-3 text-[14px] text-mute">
+        <a href="/docs#connect" className="text-ink underline hover:no-underline">{dict.console.keys.toolsGuide}</a>
+      </p>
     </div>
   );
 }
@@ -195,7 +205,7 @@ function AccountProviderKeys() {
   }
 
   return (
-    <section className="card" data-testid="account-provider-keys">
+    <section id="provider-keys" className="card scroll-mt-6" data-testid="account-provider-keys">
       <h2 className="flex items-center text-[20px] font-medium text-ink">
         {t.providerSection}
         <Tip text={tips.providerKeys} />
@@ -312,7 +322,8 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
 
   return (
     <div className="flex max-w-4xl flex-col gap-8">
-      <header className="flex items-center justify-between">
+      <OnboardingChecklist />
+      <header id="create-key" className="flex scroll-mt-6 items-center justify-between">
         <div>
           <h1 className="flex items-center text-display-md text-ink">
             {t.title}
@@ -436,7 +447,52 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
 
             {!k.revoked_at && (
               <div className="mt-6 flex flex-col gap-5 border-t border-hairline pt-6">
-                {/* toggles */}
+                {/* Autopilot: the one switch most users ever need */}
+                {(() => {
+                  const autopilot =
+                    k.auto_cache_control && k.keepalive_enabled && (!cloud || k.cache_tuning_mode === "auto");
+                  const anyOn = k.auto_cache_control || k.keepalive_enabled;
+                  return (
+                    <label className="flex items-start gap-3">
+                      <input type="checkbox" className="mt-1 h-4 w-4 accent-[#080808]"
+                        data-testid="autopilot-toggle"
+                        checked={autopilot}
+                        onChange={(e) => void patch(k.id, e.target.checked
+                          ? { auto_cache_control: true, keepalive_enabled: true, ...(cloud ? { cache_tuning_mode: "auto" } : {}) }
+                          : { auto_cache_control: false, keepalive_enabled: false, ...(cloud ? { cache_tuning_mode: "manual" } : {}) })} />
+                      <span>
+                        <span className="inline-flex items-center text-[16px] font-medium text-ink">
+                          🚀 {t.autopilotTitle}
+                          <Tip text={tips.autopilot} />
+                        </span>
+                        <span className="block text-[14px] leading-relaxed text-mute">{t.autopilotBody}</span>
+                        {!autopilot && anyOn && (
+                          <span className="mt-1 inline-block rounded bg-accent-blue/10 px-2 py-0.5 text-[12.5px] font-medium text-blue-info"
+                            data-testid="autopilot-custom">
+                            {t.autopilotCustom}
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })()}
+
+                {k.keepalive_enabled && k.keepalive_hold_until &&
+                  new Date(k.keepalive_hold_until) > new Date() && (
+                  <div className="ml-7 inline-flex w-fit items-center gap-1.5 rounded-btn bg-accent-green/[0.12] px-2.5 py-1 text-[13px] font-medium text-ink"
+                    data-testid="hold-badge">
+                    🔥 {fmt(t.holdActive, {
+                      until: new Date(k.keepalive_hold_until).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                    })}
+                  </div>
+                )}
+
+                {/* everything below is expert territory — Autopilot already covers it */}
+                <details className="group" data-testid="advanced-settings">
+                <summary className="cursor-pointer select-none text-[15px] text-body-mid hover:text-ink">
+                  {t.advancedToggle}
+                </summary>
+                <div className="mt-5 flex flex-col gap-5">
                 <label className="flex items-start gap-3">
                   <input type="checkbox" className="mt-1 h-4 w-4 accent-[#080808]"
                     checked={k.auto_cache_control}
@@ -570,17 +626,11 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
                     💬 {t.holdHint}
                   </p>
                 )}
-                {k.keepalive_enabled && k.keepalive_hold_until &&
-                  new Date(k.keepalive_hold_until) > new Date() && (
-                  <div className="ml-7 inline-flex w-fit items-center gap-1.5 rounded-btn bg-accent-green/[0.12] px-2.5 py-1 text-[13px] font-medium text-ink"
-                    data-testid="hold-badge">
-                    🔥 {fmt(t.holdActive, {
-                      until: new Date(k.keepalive_hold_until).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                    })}
-                  </div>
-                )}
+                </div>
+                </details>
 
-                {/* advanced: per-key provider key overrides */}
+                {/* per-key provider key overrides — independent of cache tuning,
+                    so it sits beside it: Autopilot users still may want BYOK */}
                 <details className="group">
                   <summary className="cursor-pointer select-none text-[15px] text-body-mid hover:text-ink">
                     {t.overrideToggle}

@@ -38,7 +38,7 @@ verdad:
   explícito más un `prompt_cache_key` ESTABLE, verificado en vivo
   0% → 99,6% de aciertos de prefijo), y detección de rompedores de caché con
   la causa raíz probable (timestamps, IDs aleatorios, tools reordenadas).
-- **Calentamiento keep-alive** *(opt-in por clave, solo Anthropic — por
+- **Calentador de caché (keep-alive)** *(opt-in por clave, solo Anthropic — por
   diseño)* — pings de 1 token recalientan tu prefijo exactamente mientras
   reutilizarlo es económico (hasta 62,5 min), dentro de un presupuesto diario
   que tú controlas. Los demás proveedores retienen sus cachés en el upstream
@@ -104,6 +104,26 @@ sigue aplicando. La consola muestra una insignia
 | Empezar | [caching.ai](https://caching.ai) — 2 minutos | `docker compose up` abajo |
 
 Si no te ahorramos nada, no pagas nada — ese es todo el modelo de precios.
+
+## Qué añade la nube gestionada
+
+El autoalojamiento te da el proxy completo. La nube añade las partes que son
+pesadas de operar por tu cuenta:
+
+- **Auto-Tune** *(solo nube — [`ee/`](ee/README.md))*: aprende el ritmo real
+  de llamadas de cada clave y sigue re-eligiendo la configuración de caché
+  más barata cuando tu tráfico cambia. La capa "configúralo y olvídate"
+  encima del Piloto automático.
+- **Facturación por ahorro verificado**: medimos lo que de verdad ahorraste —
+  neto de cada señal de calentamiento — y cobramos el 20% de eso. Menos de
+  $5/mes queda exento. Si no ahorras, no pagas.
+- **Informes listos desde el primer día**: el email semanal de ahorro y las
+  alertas diarias de presupuesto llegan sin configurar nada (autoalojado
+  necesitas tu propia clave de Resend).
+- **Cero operaciones**: la flota de proxies, el daemon de calentamiento,
+  Postgres, migraciones y cada upgrade son nuestro busca, no el tuyo.
+- **2 minutos hasta el primer ahorro**: [caching.ai](https://caching.ai) →
+  registra tus claves de proveedor → cambia una base URL.
 
 ## Autoalojamiento
 
