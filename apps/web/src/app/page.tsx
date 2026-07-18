@@ -46,6 +46,72 @@ export default async function Landing() {
     no: <span className="text-mute-soft">—</span>,
   };
 
+  // Trust section mini-visuals — index-matched to d.trust.items (same order in
+  // every locale). Decorative only (aria-hidden on the container); any text is
+  // a universal token (A/B, cipher name, numbers), so no i18n needed.
+  const keyChip = (label: string) => (
+    <span className="rounded bg-ink px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white">{label}</span>
+  );
+  const trustVisuals: React.ReactNode[] = [
+    // 1 — per-account cache isolation: two lanes that never touch
+    <div key="iso" className="flex w-full flex-col gap-2">
+      {(["A", "B"] as const).map((u) => (
+        <div key={u} className="flex items-center gap-2">
+          {keyChip(`key ${u}`)}
+          <div className={`h-1.5 flex-1 rounded-full ${u === "A" ? "bg-accent-green/60" : "bg-accent-blue/50"}`} />
+          <span className={`rounded border px-2 py-0.5 font-mono text-[10px] font-semibold ${u === "A" ? "border-accent-green/50 text-[#046a12]" : "border-accent-blue/50 text-blue-info"}`}>
+            cache {u}
+          </span>
+        </div>
+      ))}
+    </div>,
+    // 2 — keys encrypted at rest
+    <div key="keys" className="flex w-full items-center justify-center gap-2.5">
+      <span className="text-[20px]">🔑</span>
+      <span className="text-mute">→</span>
+      <span className="flex items-center gap-1.5 rounded-btn border-2 border-ink px-2.5 py-1.5 font-mono text-[11px] font-semibold text-ink">
+        🔒 AES-256-GCM
+      </span>
+    </div>,
+    // 3 — prompt bodies vanish; only numbers remain
+    <div key="body" className="flex w-full flex-col gap-1.5">
+      <div className="flex flex-col gap-1 opacity-40">
+        <div className="h-1.5 w-4/5 rounded-full bg-mute-soft line-through" style={{ textDecoration: "line-through" }} />
+        <div className="h-1.5 w-3/5 rounded-full bg-mute-soft" />
+      </div>
+      <div className="flex flex-wrap gap-1.5 font-mono text-[10px]">
+        <span className="rounded bg-ink/5 px-1.5 py-0.5 text-body-mid">1,204 tok</span>
+        <span className="rounded bg-ink/5 px-1.5 py-0.5 text-body-mid">87 ms</span>
+        <span className="rounded bg-ink/5 px-1.5 py-0.5 text-body-mid">#a3f2…</span>
+        <span className="rounded bg-accent-green/15 px-1.5 py-0.5 font-semibold text-[#046a12]">✓ 200</span>
+      </div>
+    </div>,
+    // 4 — byte-identical passthrough
+    <div key="bytes" className="flex w-full items-center justify-center gap-2 font-mono text-[11px] text-body-mid">
+      <span className="rounded bg-ink/5 px-2 py-1">0110 1011…</span>
+      <span className="text-mute">→</span>
+      <span className="rounded bg-ink/5 px-2 py-1">0110 1011…</span>
+      <span className="font-semibold text-[#008a16]">=</span>
+    </div>,
+    // 5 — one-click wipe
+    <div key="wipe" className="flex w-full flex-col justify-center gap-1.5">
+      {[80, 60, 70].map((w, idx) => (
+        <div key={idx} className="flex items-center gap-2" style={{ opacity: 1 - idx * 0.3 }}>
+          <div className="h-1.5 rounded-full bg-mute-soft" style={{ width: `${w}%` }} />
+          <span className="font-mono text-[10px] text-error">✕</span>
+        </div>
+      ))}
+    </div>,
+    // 6 — everything is a switch
+    <div key="switch" className="flex w-full items-center justify-center gap-3">
+      {[true, true, false].map((on, idx) => (
+        <span key={idx} className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-none ${on ? "justify-end bg-accent-green" : "justify-start bg-mute-soft"}`}>
+          <span className="h-4 w-4 rounded-full bg-white shadow" />
+        </span>
+      ))}
+    </div>,
+  ];
+
   return (
     <main>
       {/* Nav */}
@@ -454,13 +520,11 @@ export default async function Landing() {
         <h2 className="mx-auto mt-3 max-w-3xl text-center text-display-lg text-ink">{d.trust.title}</h2>
         <p className="mx-auto mt-5 max-w-3xl text-center text-[17px] leading-relaxed text-body-mid [text-wrap:balance]">{d.trust.lead}</p>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {d.trust.items.map((it) => (
-            <div key={it.title} className="card !p-7">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ink" aria-hidden>
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 1.5l5 2v4c0 3.2-2.1 5.7-5 7-2.9-1.3-5-3.8-5-7v-4l5-2z" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M5.7 8l1.6 1.6 3-3.2" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+          {d.trust.items.map((it, i) => (
+            <div key={it.title} className="card flex flex-col !p-7">
+              {/* one mini visual per claim — order mirrors the items array in every locale */}
+              <div className="flex h-20 items-center rounded-card bg-[#fafafa] px-4" aria-hidden>
+                {trustVisuals[i]}
               </div>
               <h3 className="mt-4 text-[19px] font-medium text-ink">{it.title}</h3>
               <p className="mt-2 text-[15px] leading-relaxed text-body-mid">{it.body}</p>

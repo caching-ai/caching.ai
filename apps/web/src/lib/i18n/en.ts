@@ -573,7 +573,6 @@ export const en = {
       { title: "Byte-identical passthrough", body: "Responses stream through unbuffered, byte for byte. Your app sees exactly what the provider sent — analytics happen after the response is on its way." },
       { title: "Leave in one click", body: "Delete your account yourself, anytime. Keys, stored prefixes, and your card are wiped immediately — no email ping-pong." },
       { title: "Every optimization is a switch", body: "Cache injection, warming, TTL, retention — all per-key opt-ins you can flip off at any moment. Nothing is forced on your traffic." },
-      { title: "A fee you can watch", body: "Your running 20% fee is on the dashboard all month. Under $5 it's waived — if we save you nothing, you pay nothing." },
     ],
   },
   docs: {

@@ -574,7 +574,6 @@ export const es: Dict = {
       { title: "Paso byte a byte", body: "Las respuestas fluyen sin buffering, byte a byte. Tu app ve exactamente lo que envió el proveedor — la analítica ocurre cuando la respuesta ya va de camino." },
       { title: "Irse cuesta un clic", body: "Borra tu cuenta tú mismo, cuando quieras. Claves, prefijos guardados y tarjeta se eliminan de inmediato — sin intercambio de correos." },
       { title: "Cada optimización es un interruptor", body: "Inyección de caché, keep-alive, TTL, retención — todo es opt-in por clave y puedes apagarlo en cualquier momento. Nada se impone a tu tráfico." },
-      { title: "Una tarifa que puedes vigilar", body: "Tu tarifa del 20% se ve en el panel todo el mes. Por debajo de $5 se condona — si no te ahorramos nada, no pagas nada." },
     ],
   },
   docs: {
