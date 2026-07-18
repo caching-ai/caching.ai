@@ -1,0 +1,15 @@
+{
+  "id": "S4",
+  "name": "batch-classify",
+  "description": "Classification batch: 300 short back-to-back calls sharing a ~4.9k-token instruction prefix. Hypothesis: providers with automatic caching mostly hit anyway; C additionally pins OpenAI cache routing with an injected prompt_cache_key (x-grok-conv-id on Grok).",
+  "keepalive": false,
+  "maxOutputTokens": 12,
+  "system": "system-classify.txt",
+  "tools": null,
+  "userPool": "classify-items.txt",
+  "generate": {
+    "count": 300,
+    "gapSec": 0.3,
+    "kind": "chat"
+  }
+}

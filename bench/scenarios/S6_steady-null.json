@@ -1,0 +1,15 @@
+{
+  "id": "S6",
+  "name": "steady-null",
+  "description": "Null scenario, published on purpose: 60 calls at a steady 30-second cadence over a ~5k-token system prompt. Caches stay warm by themselves at this cadence. Hypothesis: on auto-caching providers all arms cost the same and C only adds proxy latency; on Anthropic, B and C tie (C matches hand-tuning, adds nothing beyond automation).",
+  "keepalive": false,
+  "maxOutputTokens": 64,
+  "system": "system-steady.txt",
+  "tools": null,
+  "userPool": "steady-questions.txt",
+  "generate": {
+    "count": 60,
+    "gapSec": 30,
+    "kind": "chat"
+  }
+}

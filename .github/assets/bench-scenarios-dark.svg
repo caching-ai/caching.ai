@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="576" viewBox="0 0 880 576" role="img" aria-label="Input-side cost vs calling Anthropic directly — claude-haiku-4.5">
+<rect width="880" height="576" fill="#1a1a19"/>
+<text x="24" y="34" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="17" font-weight="650" fill="#ffffff">Input-side cost vs calling Anthropic directly — claude-haiku-4.5</text>
+<text x="24" y="56" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" fill="#c3c2b7">A = direct (no cache hints) · B = direct, hand-tuned cache_control · C = caching.ai, net of keep-alive pings. 100% = A. Lower is better.</text><line x1="200" y1="76" x2="200" y2="536" stroke="#2c2c2a" stroke-width="1"/>
+<text x="200" y="552" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">0%</text><line x1="300.07158448142326" y1="76" x2="300.07158448142326" y2="536" stroke="#2c2c2a" stroke-width="1"/>
+<text x="300.07158448142326" y="552" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">25%</text><line x1="400.1431689628465" y1="76" x2="400.1431689628465" y2="536" stroke="#2c2c2a" stroke-width="1"/>
+<text x="400.1431689628465" y="552" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">50%</text><line x1="500.21475344426983" y1="76" x2="500.21475344426983" y2="536" stroke="#2c2c2a" stroke-width="1"/>
+<text x="500.21475344426983" y="552" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">75%</text><line x1="600.286337925693" y1="76" x2="600.286337925693" y2="536" stroke="#383835" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="600.286337925693" y="552" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">100%</text><line x1="700.3579224071163" y1="76" x2="700.3579224071163" y2="536" stroke="#2c2c2a" stroke-width="1"/>
+<text x="700.3579224071163" y="552" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">125%</text><text x="24" y="112" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#ffffff">S1 agent loop</text><text x="24" y="127" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">40 calls, 0–90s gaps</text><rect x="200" y="86" width="400.28633792569303" height="16" rx="0" fill="#3987e5"/>
+<rect x="596.286337925693" y="86" width="4" height="16" rx="2" fill="#3987e5"/>
+<text x="192" y="98" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">A</text>
+<text x="608.286337925693" y="98" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">100%</text><rect x="200" y="106" width="134.4216065671675" height="16" rx="0" fill="#008300"/>
+<rect x="330.4216065671675" y="106" width="4" height="16" rx="2" fill="#008300"/>
+<text x="192" y="118" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">B</text>
+<text x="342.4216065671675" y="118" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">34%</text><rect x="200" y="126" width="134.4216065671675" height="16" rx="0" fill="#d55181"/>
+<rect x="330.4216065671675" y="126" width="4" height="16" rx="2" fill="#d55181"/>
+<text x="192" y="138" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">C</text>
+<text x="342.4216065671675" y="138" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">34%</text><text x="24" y="186" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#ffffff">S2 sparse support</text><text x="24" y="201" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">12 calls, 6–9 min idle</text><rect x="200" y="160" width="400.28633792569303" height="16" rx="0" fill="#3987e5"/>
+<rect x="596.286337925693" y="160" width="4" height="16" rx="2" fill="#3987e5"/>
+<text x="192" y="172" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">A</text>
+<text x="608.286337925693" y="172" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">100%</text><rect x="200" y="180" width="499.75048442816865" height="16" rx="0" fill="#008300"/>
+<rect x="695.7504844281686" y="180" width="4" height="16" rx="2" fill="#008300"/>
+<text x="192" y="192" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">B</text>
+<text x="707.7504844281686" y="192" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">125%</text><rect x="200" y="200" width="133.3310146910526" height="16" rx="0" fill="#d55181"/>
+<rect x="329.3310146910526" y="200" width="4" height="16" rx="2" fill="#d55181"/>
+<text x="192" y="212" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">C</text>
+<text x="341.3310146910526" y="212" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">33%<tspan dx="6" font-size="11" font-weight="400" fill="#898781">+16 pings</tspan></text><text x="24" y="260" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#ffffff">S3 timestamp breaker</text><text x="24" y="275" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">prefix changes every call</text><rect x="200" y="234" width="400.28633792569303" height="16" rx="0" fill="#3987e5"/>
+<rect x="596.286337925693" y="234" width="4" height="16" rx="2" fill="#3987e5"/>
+<text x="192" y="246" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">A</text>
+<text x="608.286337925693" y="246" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">100%</text><rect x="200" y="254" width="499.705585225488" height="16" rx="0" fill="#008300"/>
+<rect x="695.705585225488" y="254" width="4" height="16" rx="2" fill="#008300"/>
+<text x="192" y="266" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">B</text>
+<text x="707.705585225488" y="266" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">125%</text><rect x="200" y="274" width="499.705585225488" height="16" rx="0" fill="#d55181"/>
+<rect x="695.705585225488" y="274" width="4" height="16" rx="2" fill="#d55181"/>
+<text x="192" y="286" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">C</text>
+<text x="707.705585225488" y="286" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">125%</text><text x="24" y="334" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#ffffff">S4 classify batch</text><text x="24" y="349" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">300 back-to-back calls</text><rect x="200" y="308" width="400.28633792569303" height="16" rx="0" fill="#3987e5"/>
+<rect x="596.286337925693" y="308" width="4" height="16" rx="2" fill="#3987e5"/>
+<text x="192" y="320" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">A</text>
+<text x="608.286337925693" y="320" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">100%</text><rect x="200" y="328" width="43.30682987946665" height="16" rx="0" fill="#008300"/>
+<rect x="239.30682987946665" y="328" width="4" height="16" rx="2" fill="#008300"/>
+<text x="192" y="340" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">B</text>
+<text x="251.30682987946665" y="340" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">11%</text><rect x="200" y="348" width="43.30682987946665" height="16" rx="0" fill="#d55181"/>
+<rect x="239.30682987946665" y="348" width="4" height="16" rx="2" fill="#d55181"/>
+<text x="192" y="360" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">C</text>
+<text x="251.30682987946665" y="360" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">11%</text><text x="24" y="408" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#ffffff">S5 lunch break</text><text x="24" y="423" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">45 min idle</text><rect x="200" y="382" width="400.28633792569303" height="16" rx="0" fill="#3987e5"/>
+<rect x="596.286337925693" y="382" width="4" height="16" rx="2" fill="#3987e5"/>
+<text x="192" y="394" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">A</text>
+<text x="608.286337925693" y="394" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">100%</text><rect x="200" y="402" width="500" height="16" rx="0" fill="#008300"/>
+<rect x="696" y="402" width="4" height="16" rx="2" fill="#008300"/>
+<text x="192" y="414" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">B</text>
+<text x="708" y="414" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">125%</text><rect x="200" y="422" width="493.12671626728024" height="16" rx="0" fill="#d55181"/>
+<rect x="689.1267162672802" y="422" width="4" height="16" rx="2" fill="#d55181"/>
+<text x="192" y="434" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">C</text>
+<text x="701.1267162672802" y="434" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">123%<tspan dx="6" font-size="11" font-weight="400" fill="#898781">+11 pings</tspan></text><text x="24" y="482" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#ffffff">S6 steady traffic ★null</text><text x="24" y="497" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">60 calls, 30s apart</text><rect x="200" y="456" width="400.28633792569303" height="16" rx="0" fill="#3987e5"/>
+<rect x="596.286337925693" y="456" width="4" height="16" rx="2" fill="#3987e5"/>
+<text x="192" y="468" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">A</text>
+<text x="608.286337925693" y="468" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">100%</text><rect x="200" y="476" width="49.612099803445915" height="16" rx="0" fill="#008300"/>
+<rect x="245.61209980344591" y="476" width="4" height="16" rx="2" fill="#008300"/>
+<text x="192" y="488" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">B</text>
+<text x="257.6120998034459" y="488" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">12%</text><rect x="200" y="496" width="49.612099803445915" height="16" rx="0" fill="#d55181"/>
+<rect x="245.61209980344591" y="496" width="4" height="16" rx="2" fill="#d55181"/>
+<text x="192" y="508" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#c3c2b7">C</text>
+<text x="257.6120998034459" y="508" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">12%</text><text x="24" y="568" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Mean of 3 runs · provider-reported usage × list prices · S3/S6 published as honest null/negative results</text></svg>

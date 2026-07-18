@@ -1,0 +1,72 @@
+{
+  "id": "S2",
+  "name": "support-sparse",
+  "description": "Sparse customer support: 12 independent conversations sharing a ~5.6k-token system prompt, 6-9 minutes idle between conversations — past every short cache TTL. Hypothesis (flagship): direct arms re-pay the full prefix every time; C's keep-alive pings keep the prefix warm, reported net of ping cost.",
+  "keepalive": true,
+  "maxOutputTokens": 96,
+  "system": "system-support.txt",
+  "tools": null,
+  "userPool": "support-questions.txt",
+  "steps": [
+    {
+      "gapSec": 0,
+      "kind": "chat",
+      "userLine": 0
+    },
+    {
+      "gapSec": 390,
+      "kind": "chat",
+      "userLine": 1
+    },
+    {
+      "gapSec": 480,
+      "kind": "chat",
+      "userLine": 2
+    },
+    {
+      "gapSec": 420,
+      "kind": "chat",
+      "userLine": 3
+    },
+    {
+      "gapSec": 540,
+      "kind": "chat",
+      "userLine": 4
+    },
+    {
+      "gapSec": 360,
+      "kind": "chat",
+      "userLine": 5
+    },
+    {
+      "gapSec": 450,
+      "kind": "chat",
+      "userLine": 6
+    },
+    {
+      "gapSec": 510,
+      "kind": "chat",
+      "userLine": 7
+    },
+    {
+      "gapSec": 390,
+      "kind": "chat",
+      "userLine": 8
+    },
+    {
+      "gapSec": 540,
+      "kind": "chat",
+      "userLine": 9
+    },
+    {
+      "gapSec": 420,
+      "kind": "chat",
+      "userLine": 10
+    },
+    {
+      "gapSec": 480,
+      "kind": "chat",
+      "userLine": 11
+    }
+  ]
+}

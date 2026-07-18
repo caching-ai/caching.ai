@@ -1,0 +1,252 @@
+{
+  "id": "S1",
+  "name": "agent-coding",
+  "description": "Agent coding loop: 40 calls over one growing conversation, 0-90s between calls, fixed ~8k-token system+tools prefix. Hypothesis: on Anthropic, arm A never caches (no cache_control); B and C should look alike — C's value is that nobody had to hand-place the breakpoints.",
+  "keepalive": true,
+  "maxOutputTokens": 128,
+  "system": "system-coding.txt",
+  "tools": "tools-coding.json",
+  "conversation": "coding-turns.json",
+  "steps": [
+    {
+      "gapSec": 0,
+      "kind": "chat",
+      "history": 0,
+      "userTurn": 0
+    },
+    {
+      "gapSec": 49,
+      "kind": "chat",
+      "history": 1,
+      "userTurn": 1
+    },
+    {
+      "gapSec": 25,
+      "kind": "chat",
+      "history": 2,
+      "userTurn": 2
+    },
+    {
+      "gapSec": 84,
+      "kind": "chat",
+      "history": 3,
+      "userTurn": 3
+    },
+    {
+      "gapSec": 46,
+      "kind": "chat",
+      "history": 4,
+      "userTurn": 4
+    },
+    {
+      "gapSec": 60,
+      "kind": "chat",
+      "history": 5,
+      "userTurn": 5
+    },
+    {
+      "gapSec": 26,
+      "kind": "chat",
+      "history": 6,
+      "userTurn": 6
+    },
+    {
+      "gapSec": 23,
+      "kind": "chat",
+      "history": 7,
+      "userTurn": 7
+    },
+    {
+      "gapSec": 36,
+      "kind": "chat",
+      "history": 8,
+      "userTurn": 8
+    },
+    {
+      "gapSec": 31,
+      "kind": "chat",
+      "history": 9,
+      "userTurn": 9
+    },
+    {
+      "gapSec": 53,
+      "kind": "chat",
+      "history": 10,
+      "userTurn": 10
+    },
+    {
+      "gapSec": 66,
+      "kind": "chat",
+      "history": 11,
+      "userTurn": 11
+    },
+    {
+      "gapSec": 68,
+      "kind": "chat",
+      "history": 12,
+      "userTurn": 12
+    },
+    {
+      "gapSec": 55,
+      "kind": "chat",
+      "history": 13,
+      "userTurn": 13
+    },
+    {
+      "gapSec": 89,
+      "kind": "chat",
+      "history": 14,
+      "userTurn": 14
+    },
+    {
+      "gapSec": 30,
+      "kind": "chat",
+      "history": 15,
+      "userTurn": 15
+    },
+    {
+      "gapSec": 68,
+      "kind": "chat",
+      "history": 16,
+      "userTurn": 16
+    },
+    {
+      "gapSec": 77,
+      "kind": "chat",
+      "history": 17,
+      "userTurn": 17
+    },
+    {
+      "gapSec": 18,
+      "kind": "chat",
+      "history": 18,
+      "userTurn": 18
+    },
+    {
+      "gapSec": 58,
+      "kind": "chat",
+      "history": 19,
+      "userTurn": 19
+    },
+    {
+      "gapSec": 10,
+      "kind": "chat",
+      "history": 20,
+      "userTurn": 20
+    },
+    {
+      "gapSec": 17,
+      "kind": "chat",
+      "history": 21,
+      "userTurn": 21
+    },
+    {
+      "gapSec": 20,
+      "kind": "chat",
+      "history": 22,
+      "userTurn": 22
+    },
+    {
+      "gapSec": 11,
+      "kind": "chat",
+      "history": 23,
+      "userTurn": 23
+    },
+    {
+      "gapSec": 19,
+      "kind": "chat",
+      "history": 24,
+      "userTurn": 24
+    },
+    {
+      "gapSec": 11,
+      "kind": "chat",
+      "history": 25,
+      "userTurn": 25
+    },
+    {
+      "gapSec": 18,
+      "kind": "chat",
+      "history": 26,
+      "userTurn": 26
+    },
+    {
+      "gapSec": 41,
+      "kind": "chat",
+      "history": 27,
+      "userTurn": 27
+    },
+    {
+      "gapSec": 39,
+      "kind": "chat",
+      "history": 28,
+      "userTurn": 28
+    },
+    {
+      "gapSec": 51,
+      "kind": "chat",
+      "history": 29,
+      "userTurn": 29
+    },
+    {
+      "gapSec": 44,
+      "kind": "chat",
+      "history": 30,
+      "userTurn": 30
+    },
+    {
+      "gapSec": 83,
+      "kind": "chat",
+      "history": 31,
+      "userTurn": 31
+    },
+    {
+      "gapSec": 33,
+      "kind": "chat",
+      "history": 32,
+      "userTurn": 32
+    },
+    {
+      "gapSec": 11,
+      "kind": "chat",
+      "history": 33,
+      "userTurn": 33
+    },
+    {
+      "gapSec": 77,
+      "kind": "chat",
+      "history": 34,
+      "userTurn": 34
+    },
+    {
+      "gapSec": 7,
+      "kind": "chat",
+      "history": 35,
+      "userTurn": 35
+    },
+    {
+      "gapSec": 59,
+      "kind": "chat",
+      "history": 36,
+      "userTurn": 36
+    },
+    {
+      "gapSec": 62,
+      "kind": "chat",
+      "history": 37,
+      "userTurn": 37
+    },
+    {
+      "gapSec": 28,
+      "kind": "chat",
+      "history": 38,
+      "userTurn": 38
+    },
+    {
+      "gapSec": 76,
+      "kind": "chat",
+      "history": 39,
+      "userTurn": 39
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+Before lunch: summarize the riskiest component in one paragraph and name the invariant most likely to break under load.
+Back from lunch: same briefing — which component should we refactor first this quarter, and why in two sentences?

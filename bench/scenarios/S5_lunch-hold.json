@@ -1,0 +1,27 @@
+{
+  "id": "S5",
+  "name": "lunch-hold",
+  "description": "Lunch break: one call, 45 minutes idle, one call, over an ~8k-token briefing. C sends the chat command 'cai:hold 1h' before the break (45 min is also inside the keep-alive engine's default economic window, so the hold is a guarantee, not the only mechanism). Hypothesis: direct arms rewrite the whole prefix after lunch; C pays ~11 pings and reads the cache.",
+  "keepalive": true,
+  "maxOutputTokens": 160,
+  "system": "system-hold.txt",
+  "tools": null,
+  "userPool": "hold-questions.txt",
+  "steps": [
+    {
+      "gapSec": 0,
+      "kind": "chat",
+      "userLine": 0
+    },
+    {
+      "gapSec": 5,
+      "kind": "hold",
+      "holdText": "cai:hold 1h"
+    },
+    {
+      "gapSec": 2700,
+      "kind": "chat",
+      "userLine": 1
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "S3",
+  "name": "rag-timestamp",
+  "description": "RAG chat with a live timestamp at the top of the system prompt (a common mistake): the prefix changes every call, so no arm can cache. Hypothesis: A is cheapest (no write premium), B and C pay cache-write premiums for nothing — the proxy cannot fix this prompt, it can only diagnose the breaker. Reported as-is.",
+  "keepalive": false,
+  "timestampInSystem": true,
+  "maxOutputTokens": 96,
+  "system": "rag-docs.txt",
+  "tools": null,
+  "userPool": "rag-questions.txt",
+  "generate": {
+    "count": 30,
+    "gapSec": 20,
+    "kind": "chat"
+  }
+}

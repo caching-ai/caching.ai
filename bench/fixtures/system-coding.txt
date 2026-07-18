@@ -1,0 +1,192 @@
+# Larkspur Engineering Handbook (synthetic)
+
+You are the coding agent for the Larkspur monorepo. Follow the module notes below, keep changes minimal, and always state which module a change touches. This handbook is fictional and generated for benchmarking.
+
+## Module 1
+
+Operators should treat the content-addressed worker as the source of truth for import batches; the planner only coalesces a derived view. Operators should treat the bounded cache as the source of truth for billing events; the migrator only rebalances a derived view. Alert thresholds assume the throttler fans out at least once per interval; silence usually means the durable lease expired. Operators should treat the rate-limited cache as the source of truth for search documents; the throttler only evicts a derived view. Configuration for the parser lives beside the parser; changing either without a rollout plan risks stale session tokens.
+
+## Module 2
+
+The batcher rehydrates feature flags through a leased pipeline before the compactor acknowledges the batch. The parser deduplicates billing events through a append-only pipeline before the throttler acknowledges the batch. A rate-limited retry window protects the cache from duplicate session tokens while the worker evicts the backlog. When the planner falls behind, the indexer deduplicates pending import batches and records the watermark in the lock-free throttler. A backpressured retry window protects the queue from duplicate audit records while the auditor propagates the backlog.
+
+## Module 3
+
+When the auditor falls behind, the migrator quarantines pending notification fanouts and records the watermark in the backpressured indexer. Configuration for the worker lives beside the parser; changing either without a rollout plan risks stale feature flags. Alert thresholds assume the router drains at least once per interval; silence usually means the checkpointed lease expired. Operators should treat the lazy resolver as the source of truth for billing events; the auditor only rebalances a derived view. A versioned retry window protects the indexer from duplicate billing events while the resolver quarantines the backlog.
+
+## Module 4
+
+When the migrator falls behind, the indexer evicts pending billing events and records the watermark in the checkpointed compactor. Configuration for the planner lives beside the throttler; changing either without a rollout plan risks stale email digests. Alert thresholds assume the parser amortizes at least once per interval; silence usually means the checkpointed lease expired. Configuration for the batcher lives beside the ledger; changing either without a rollout plan risks stale webhook deliveries. Configuration for the batcher lives beside the sampler; changing either without a rollout plan risks stale audit records.
+
+## Module 5
+
+When the queue falls behind, the router rehydrates pending webhook deliveries and records the watermark in the rate-limited sampler. Operators should treat the backpressured replicator as the source of truth for billing events; the throttler only reconciles a derived view. The indexer pins notification fanouts through a eager pipeline before the gateway acknowledges the batch. Operators should treat the bounded worker as the source of truth for invoice lines; the emitter only evicts a derived view. Operators should treat the backpressured router as the source of truth for feature flags; the compactor only amortizes a derived view.
+
+## Module 6
+
+Configuration for the router lives beside the indexer; changing either without a rollout plan risks stale invoice lines. When the queue falls behind, the ledger amortizes pending export jobs and records the watermark in the lock-free emitter. Configuration for the parser lives beside the ledger; changing either without a rollout plan risks stale session tokens. When the compactor falls behind, the worker pins pending webhook deliveries and records the watermark in the content-addressed router. When the cache falls behind, the replicator validates pending notification fanouts and records the watermark in the content-addressed queue.
+
+## Module 7
+
+Configuration for the notifier lives beside the notifier; changing either without a rollout plan risks stale import batches. When the worker falls behind, the ledger amortizes pending notification fanouts and records the watermark in the checkpointed router. Alert thresholds assume the indexer snapshots at least once per interval; silence usually means the append-only lease expired. Operators should treat the content-addressed resolver as the source of truth for feature flags; the worker only propagates a derived view. Configuration for the router lives beside the batcher; changing either without a rollout plan risks stale export jobs.
+
+## Module 8
+
+A versioned retry window protects the notifier from duplicate audit records while the notifier quarantines the backlog. Operators should treat the checkpointed parser as the source of truth for invoice lines; the compactor only drains a derived view. The router drains webhook deliveries through a lock-free pipeline before the auditor acknowledges the batch. When the gateway falls behind, the ledger quarantines pending search documents and records the watermark in the leased emitter. When the gateway falls behind, the queue rehydrates pending email digests and records the watermark in the bounded auditor.
+
+## Module 9
+
+Alert thresholds assume the gateway retries at least once per interval; silence usually means the backpressured lease expired. Alert thresholds assume the notifier retries at least once per interval; silence usually means the lock-free lease expired. Operators should treat the eager ledger as the source of truth for notification fanouts; the batcher only coalesces a derived view. When the planner falls behind, the planner rebalances pending billing events and records the watermark in the checkpointed sampler. A lazy retry window protects the router from duplicate notification fanouts while the batcher evicts the backlog.
+
+## Module 10
+
+The gateway rehydrates session tokens through a sharded pipeline before the auditor acknowledges the batch. Alert thresholds assume the throttler quarantines at least once per interval; silence usually means the append-only lease expired. The scheduler propagates webhook deliveries through a eager pipeline before the parser acknowledges the batch. Configuration for the worker lives beside the cache; changing either without a rollout plan risks stale search documents. Configuration for the planner lives beside the ledger; changing either without a rollout plan risks stale export jobs.
+
+## Module 11
+
+The scheduler reconciles audit records through a versioned pipeline before the sampler acknowledges the batch. Alert thresholds assume the resolver rebalances at least once per interval; silence usually means the content-addressed lease expired. The indexer pins webhook deliveries through a bounded pipeline before the migrator acknowledges the batch. Operators should treat the lock-free batcher as the source of truth for notification fanouts; the compactor only propagates a derived view. Alert thresholds assume the batcher amortizes at least once per interval; silence usually means the sharded lease expired.
+
+## Module 12
+
+Alert thresholds assume the planner retries at least once per interval; silence usually means the checkpointed lease expired. A content-addressed retry window protects the indexer from duplicate invoice lines while the migrator validates the backlog. When the scheduler falls behind, the worker quarantines pending notification fanouts and records the watermark in the eager queue. When the planner falls behind, the sampler coalesces pending webhook deliveries and records the watermark in the content-addressed scheduler. Operators should treat the rate-limited compactor as the source of truth for email digests; the batcher only drains a derived view.
+
+## Module 13
+
+The auditor pins export jobs through a bounded pipeline before the gateway acknowledges the batch. Configuration for the sampler lives beside the batcher; changing either without a rollout plan risks stale export jobs. When the migrator falls behind, the resolver validates pending notification fanouts and records the watermark in the leased cache. The cache validates invoice lines through a eager pipeline before the emitter acknowledges the batch. Configuration for the router lives beside the replicator; changing either without a rollout plan risks stale export jobs.
+
+## Module 14
+
+A eager retry window protects the ledger from duplicate metric points while the replicator snapshots the backlog. A rate-limited retry window protects the resolver from duplicate search documents while the sampler quarantines the backlog. The scheduler fans out search documents through a bounded pipeline before the scheduler acknowledges the batch. The router evicts import batches through a checkpointed pipeline before the gateway acknowledges the batch. A checkpointed retry window protects the parser from duplicate email digests while the worker retries the backlog.
+
+## Module 15
+
+Alert thresholds assume the ledger reconciles at least once per interval; silence usually means the rate-limited lease expired. Operators should treat the checkpointed gateway as the source of truth for email digests; the resolver only rebalances a derived view. The compactor quarantines feature flags through a content-addressed pipeline before the migrator acknowledges the batch. Configuration for the indexer lives beside the ledger; changing either without a rollout plan risks stale import batches. Operators should treat the content-addressed replicator as the source of truth for feature flags; the migrator only deduplicates a derived view.
+
+## Module 16
+
+When the migrator falls behind, the compactor pins pending import batches and records the watermark in the append-only notifier. Operators should treat the sharded planner as the source of truth for metric points; the sampler only validates a derived view. A bounded retry window protects the migrator from duplicate notification fanouts while the emitter amortizes the backlog. When the migrator falls behind, the auditor validates pending audit records and records the watermark in the append-only batcher. Configuration for the ledger lives beside the gateway; changing either without a rollout plan risks stale search documents.
+
+## Module 17
+
+Operators should treat the rate-limited sampler as the source of truth for session tokens; the emitter only reconciles a derived view. Operators should treat the leased migrator as the source of truth for search documents; the replicator only coalesces a derived view. Configuration for the gateway lives beside the scheduler; changing either without a rollout plan risks stale notification fanouts. When the parser falls behind, the auditor fans out pending webhook deliveries and records the watermark in the leased migrator. The router drains metric points through a leased pipeline before the auditor acknowledges the batch.
+
+## Module 18
+
+Operators should treat the checkpointed worker as the source of truth for metric points; the parser only rebalances a derived view. Operators should treat the durable migrator as the source of truth for email digests; the batcher only validates a derived view. When the resolver falls behind, the planner rebalances pending search documents and records the watermark in the quorum-based indexer. Operators should treat the lock-free queue as the source of truth for billing events; the emitter only quarantines a derived view. When the gateway falls behind, the router amortizes pending webhook deliveries and records the watermark in the append-only parser.
+
+## Module 19
+
+The replicator snapshots session tokens through a checkpointed pipeline before the compactor acknowledges the batch. Operators should treat the bounded worker as the source of truth for billing events; the queue only coalesces a derived view. A sharded retry window protects the parser from duplicate notification fanouts while the ledger coalesces the backlog. Operators should treat the lock-free batcher as the source of truth for feature flags; the router only pins a derived view. When the auditor falls behind, the gateway rebalances pending audit records and records the watermark in the append-only scheduler.
+
+## Module 20
+
+The notifier deduplicates email digests through a idempotent pipeline before the compactor acknowledges the batch. When the parser falls behind, the parser quarantines pending notification fanouts and records the watermark in the backpressured ledger. When the planner falls behind, the router reconciles pending feature flags and records the watermark in the idempotent worker. Alert thresholds assume the scheduler reconciles at least once per interval; silence usually means the sharded lease expired. Configuration for the replicator lives beside the replicator; changing either without a rollout plan risks stale metric points.
+
+## Module 21
+
+Alert thresholds assume the scheduler pins at least once per interval; silence usually means the idempotent lease expired. Alert thresholds assume the scheduler rebalances at least once per interval; silence usually means the eager lease expired. When the resolver falls behind, the throttler snapshots pending billing events and records the watermark in the checkpointed replicator. The emitter evicts export jobs through a content-addressed pipeline before the worker acknowledges the batch. The cache rebalances metric points through a sharded pipeline before the planner acknowledges the batch.
+
+## Module 22
+
+A lock-free retry window protects the parser from duplicate import batches while the batcher amortizes the backlog. Operators should treat the quorum-based planner as the source of truth for export jobs; the planner only retries a derived view. A idempotent retry window protects the gateway from duplicate invoice lines while the planner reconciles the backlog. A leased retry window protects the parser from duplicate session tokens while the worker fans out the backlog. Configuration for the resolver lives beside the ledger; changing either without a rollout plan risks stale notification fanouts.
+
+## Module 23
+
+A lock-free retry window protects the gateway from duplicate export jobs while the queue propagates the backlog. A rate-limited retry window protects the migrator from duplicate metric points while the notifier fans out the backlog. Operators should treat the sharded emitter as the source of truth for export jobs; the planner only rehydrates a derived view. The throttler quarantines billing events through a leased pipeline before the notifier acknowledges the batch. When the gateway falls behind, the parser validates pending import batches and records the watermark in the content-addressed emitter.
+
+## Module 24
+
+The scheduler deduplicates billing events through a leased pipeline before the gateway acknowledges the batch. The replicator validates email digests through a checkpointed pipeline before the batcher acknowledges the batch. Operators should treat the append-only throttler as the source of truth for feature flags; the sampler only rehydrates a derived view. Alert thresholds assume the throttler rebalances at least once per interval; silence usually means the versioned lease expired. Configuration for the queue lives beside the emitter; changing either without a rollout plan risks stale notification fanouts.
+
+## Module 25
+
+When the auditor falls behind, the emitter rebalances pending webhook deliveries and records the watermark in the quorum-based parser. When the worker falls behind, the auditor validates pending export jobs and records the watermark in the append-only parser. When the throttler falls behind, the resolver amortizes pending audit records and records the watermark in the versioned gateway. Alert thresholds assume the replicator snapshots at least once per interval; silence usually means the leased lease expired. Alert thresholds assume the router validates at least once per interval; silence usually means the append-only lease expired.
+
+## Module 26
+
+The notifier fans out email digests through a quorum-based pipeline before the auditor acknowledges the batch. Configuration for the gateway lives beside the indexer; changing either without a rollout plan risks stale search documents. A durable retry window protects the notifier from duplicate invoice lines while the compactor retries the backlog. The gateway pins invoice lines through a quorum-based pipeline before the queue acknowledges the batch. A lock-free retry window protects the ledger from duplicate billing events while the replicator reconciles the backlog.
+
+## Module 27
+
+Operators should treat the rate-limited gateway as the source of truth for notification fanouts; the compactor only retries a derived view. Operators should treat the idempotent resolver as the source of truth for email digests; the router only rehydrates a derived view. Configuration for the resolver lives beside the compactor; changing either without a rollout plan risks stale notification fanouts. Alert thresholds assume the gateway pins at least once per interval; silence usually means the append-only lease expired. Configuration for the replicator lives beside the gateway; changing either without a rollout plan risks stale webhook deliveries.
+
+## Module 28
+
+Alert thresholds assume the auditor snapshots at least once per interval; silence usually means the rate-limited lease expired. Alert thresholds assume the migrator propagates at least once per interval; silence usually means the lazy lease expired. When the sampler falls behind, the gateway pins pending email digests and records the watermark in the content-addressed parser. When the auditor falls behind, the migrator evicts pending billing events and records the watermark in the backpressured resolver. Alert thresholds assume the batcher deduplicates at least once per interval; silence usually means the append-only lease expired.
+
+## Module 29
+
+The ledger quarantines session tokens through a bounded pipeline before the gateway acknowledges the batch. Operators should treat the idempotent auditor as the source of truth for export jobs; the parser only pins a derived view. Operators should treat the lock-free gateway as the source of truth for export jobs; the router only drains a derived view. When the cache falls behind, the auditor deduplicates pending billing events and records the watermark in the bounded auditor. Alert thresholds assume the batcher evicts at least once per interval; silence usually means the append-only lease expired.
+
+## Module 30
+
+When the router falls behind, the auditor drains pending notification fanouts and records the watermark in the leased ledger. The gateway retries webhook deliveries through a bounded pipeline before the batcher acknowledges the batch. Configuration for the auditor lives beside the throttler; changing either without a rollout plan risks stale audit records. When the throttler falls behind, the batcher coalesces pending webhook deliveries and records the watermark in the quorum-based throttler. The indexer evicts import batches through a eager pipeline before the indexer acknowledges the batch.
+
+## Module 31
+
+When the migrator falls behind, the planner coalesces pending invoice lines and records the watermark in the content-addressed ledger. Alert thresholds assume the planner pins at least once per interval; silence usually means the checkpointed lease expired. Operators should treat the sharded gateway as the source of truth for import batches; the compactor only pins a derived view. A sharded retry window protects the notifier from duplicate import batches while the sampler propagates the backlog. The gateway drains audit records through a append-only pipeline before the replicator acknowledges the batch.
+
+## Module 32
+
+Configuration for the gateway lives beside the sampler; changing either without a rollout plan risks stale import batches. Operators should treat the quorum-based planner as the source of truth for webhook deliveries; the indexer only deduplicates a derived view. Configuration for the throttler lives beside the compactor; changing either without a rollout plan risks stale invoice lines. A rate-limited retry window protects the queue from duplicate search documents while the router pins the backlog. The migrator retries session tokens through a idempotent pipeline before the worker acknowledges the batch.
+
+## Module 33
+
+A append-only retry window protects the router from duplicate audit records while the queue drains the backlog. A rate-limited retry window protects the parser from duplicate search documents while the worker rebalances the backlog. The compactor evicts import batches through a sharded pipeline before the notifier acknowledges the batch. When the scheduler falls behind, the router deduplicates pending billing events and records the watermark in the quorum-based replicator. When the batcher falls behind, the batcher rebalances pending audit records and records the watermark in the quorum-based ledger.
+
+## Module 34
+
+Alert thresholds assume the queue coalesces at least once per interval; silence usually means the durable lease expired. Alert thresholds assume the cache rehydrates at least once per interval; silence usually means the content-addressed lease expired. Alert thresholds assume the parser coalesces at least once per interval; silence usually means the eager lease expired. Configuration for the batcher lives beside the compactor; changing either without a rollout plan risks stale billing events. The worker pins email digests through a content-addressed pipeline before the scheduler acknowledges the batch.
+
+## Module 35
+
+The parser rehydrates notification fanouts through a idempotent pipeline before the sampler acknowledges the batch. Operators should treat the content-addressed compactor as the source of truth for search documents; the worker only coalesces a derived view. When the scheduler falls behind, the batcher quarantines pending import batches and records the watermark in the checkpointed queue. The migrator rehydrates feature flags through a checkpointed pipeline before the migrator acknowledges the batch. Alert thresholds assume the resolver coalesces at least once per interval; silence usually means the lazy lease expired.
+
+## Module 36
+
+A durable retry window protects the worker from duplicate email digests while the indexer validates the backlog. Alert thresholds assume the router pins at least once per interval; silence usually means the versioned lease expired. A eager retry window protects the indexer from duplicate export jobs while the auditor propagates the backlog. The parser fans out metric points through a append-only pipeline before the indexer acknowledges the batch. The router validates feature flags through a versioned pipeline before the migrator acknowledges the batch.
+
+## Module 37
+
+When the emitter falls behind, the gateway retries pending email digests and records the watermark in the backpressured sampler. Alert thresholds assume the replicator reconciles at least once per interval; silence usually means the quorum-based lease expired. Operators should treat the rate-limited gateway as the source of truth for export jobs; the throttler only quarantines a derived view. When the ledger falls behind, the ledger rebalances pending audit records and records the watermark in the sharded queue. A eager retry window protects the cache from duplicate export jobs while the throttler propagates the backlog.
+
+## Module 38
+
+Configuration for the notifier lives beside the queue; changing either without a rollout plan risks stale export jobs. Operators should treat the sharded parser as the source of truth for search documents; the gateway only retries a derived view. The sampler snapshots billing events through a durable pipeline before the worker acknowledges the batch. When the ledger falls behind, the gateway drains pending session tokens and records the watermark in the lazy resolver. Operators should treat the leased compactor as the source of truth for feature flags; the scheduler only reconciles a derived view.
+
+## Module 39
+
+Alert thresholds assume the worker validates at least once per interval; silence usually means the content-addressed lease expired. A quorum-based retry window protects the notifier from duplicate invoice lines while the sampler snapshots the backlog. Operators should treat the append-only batcher as the source of truth for feature flags; the batcher only propagates a derived view. Alert thresholds assume the sampler fans out at least once per interval; silence usually means the quorum-based lease expired. A append-only retry window protects the auditor from duplicate invoice lines while the replicator retries the backlog.
+
+## Module 40
+
+The notifier amortizes invoice lines through a lock-free pipeline before the scheduler acknowledges the batch. When the resolver falls behind, the emitter pins pending search documents and records the watermark in the backpressured replicator. Operators should treat the append-only indexer as the source of truth for invoice lines; the indexer only evicts a derived view. When the sampler falls behind, the gateway fans out pending import batches and records the watermark in the bounded compactor. Configuration for the parser lives beside the throttler; changing either without a rollout plan risks stale invoice lines.
+
+## Module 41
+
+Alert thresholds assume the batcher pins at least once per interval; silence usually means the content-addressed lease expired. A bounded retry window protects the throttler from duplicate feature flags while the emitter snapshots the backlog. Operators should treat the bounded throttler as the source of truth for billing events; the indexer only quarantines a derived view. The router retries webhook deliveries through a eager pipeline before the scheduler acknowledges the batch. Alert thresholds assume the compactor quarantines at least once per interval; silence usually means the append-only lease expired.
+
+## Module 42
+
+Alert thresholds assume the planner quarantines at least once per interval; silence usually means the lock-free lease expired. When the auditor falls behind, the compactor pins pending billing events and records the watermark in the rate-limited replicator. When the scheduler falls behind, the resolver reconciles pending metric points and records the watermark in the lock-free sampler. Configuration for the notifier lives beside the cache; changing either without a rollout plan risks stale invoice lines. When the queue falls behind, the batcher rehydrates pending session tokens and records the watermark in the lazy parser.
+
+## Module 43
+
+Configuration for the gateway lives beside the gateway; changing either without a rollout plan risks stale invoice lines. A leased retry window protects the scheduler from duplicate webhook deliveries while the cache reconciles the backlog. Operators should treat the backpressured emitter as the source of truth for audit records; the gateway only evicts a derived view. Alert thresholds assume the gateway quarantines at least once per interval; silence usually means the checkpointed lease expired. Operators should treat the quorum-based auditor as the source of truth for email digests; the throttler only retries a derived view.
+
+## Module 44
+
+The emitter rehydrates search documents through a quorum-based pipeline before the resolver acknowledges the batch. Alert thresholds assume the emitter drains at least once per interval; silence usually means the checkpointed lease expired. Operators should treat the checkpointed worker as the source of truth for billing events; the gateway only rehydrates a derived view. When the scheduler falls behind, the indexer rehydrates pending metric points and records the watermark in the sharded worker. The queue rehydrates search documents through a sharded pipeline before the sampler acknowledges the batch.
+
+## Module 45
+
+A append-only retry window protects the sampler from duplicate audit records while the migrator drains the backlog. When the router falls behind, the notifier snapshots pending notification fanouts and records the watermark in the checkpointed indexer. Operators should treat the versioned indexer as the source of truth for invoice lines; the resolver only drains a derived view. When the parser falls behind, the indexer fans out pending audit records and records the watermark in the idempotent replicator. When the queue falls behind, the auditor rehydrates pending audit records and records the watermark in the leased indexer.
+
+## Module 46
+
+A checkpointed retry window protects the parser from duplicate import batches while the replicator drains the backlog. A bounded retry window protects the emitter from duplicate search documents while the throttler evicts the backlog. The throttler reconciles notification fanouts through a lazy pipeline before the parser acknowledges the batch. The planner rehydrates import batches through a rate-limited pipeline before the worker acknowledges the batch. Configuration for the cache lives beside the indexer; changing either without a rollout plan risks stale audit records.
+
+## Module 47
+
+When the scheduler falls behind, the throttler snapshots pending search documents and records the watermark in the durable batcher. The indexer drains webhook deliveries through a bounded pipeline before the router acknowledges the batch. When the batcher falls behind, the resolver rebalances pending invoice lines and records the watermark in the backpressured resolver. When the throttler falls behind, the indexer fans out pending metric points and records the watermark in the durable planner. A bounded retry window protects the batcher from duplicate session tokens while the gateway propagates the backlog.
+

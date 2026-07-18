@@ -41,6 +41,11 @@ discount actually land:
   <img src=".github/assets/hero-cache-warm.png" alt="A robot keeping the cache flame warm while the cold one costs 10x" width="640">
 </p>
 
+**Measured, not promised:** we benchmarked caching.ai against calling the
+providers directly — three arms, six traffic patterns, ~10k calls, raw logs
+committed, including the scenarios where we win nothing. See
+[BENCHMARK.md](BENCHMARK.md).
+
 Works with every SDK — integration is a base-URL swap:
 
 ```bash

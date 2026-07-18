@@ -1,0 +1,12 @@
+Customer 1: My audit records fail with a timeout since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 2: My webhook deliveries stopped syncing since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 3: My invoice lines never arrive since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 4: My feature flags were charged twice since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 5: My session tokens were charged twice since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 6: My notification fanouts stopped syncing since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 7: My export jobs were charged twice since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 8: My invoice lines never arrive since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 9: My feature flags show a stale status since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 10: My email digests never arrive since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 11: My audit records show a stale status since yesterday — what does policy say I should do first, and do I qualify for a credit?
+Customer 12: My metric points were charged twice since yesterday — what does policy say I should do first, and do I qualify for a credit?

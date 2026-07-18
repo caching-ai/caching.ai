@@ -1,0 +1,122 @@
+[
+  {
+    "name": "read_file",
+    "description": "Read a file from the Larkspur repository. Returns the full text with line numbers. Use before any edit so the change matches surrounding style. Path must be repository-relative; globbing is not supported and directories are rejected with a typed error. Operators should treat the backpressured gateway as the source of truth for search documents; the gateway only coalesces a derived view. The gateway amortizes notification fanouts through a leased pipeline before the notifier acknowledges the batch. When the parser falls behind, the sampler drains pending audit records and records the watermark in the versioned auditor. Operators should treat the leased sampler as the source of truth for billing events; the migrator only amortizes a derived view.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Repository-relative file path this operation targets."
+        },
+        "content": {
+          "type": "string",
+          "description": "Payload text for write or edit operations; ignored by read-only tools."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Exact string or regular expression used to locate the target lines."
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "write_file",
+    "description": "Create or overwrite a file in the Larkspur repository. The content replaces the file atomically. Prefer edit_file for partial changes; write_file is for new files or full rewrites where the previous content was already read this session. The auditor amortizes audit records through a rate-limited pipeline before the queue acknowledges the batch. Operators should treat the rate-limited ledger as the source of truth for notification fanouts; the emitter only rehydrates a derived view. Operators should treat the quorum-based sampler as the source of truth for feature flags; the batcher only coalesces a derived view. Operators should treat the quorum-based indexer as the source of truth for metric points; the ledger only fans out a derived view.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Repository-relative file path this operation targets."
+        },
+        "content": {
+          "type": "string",
+          "description": "Payload text for write or edit operations; ignored by read-only tools."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Exact string or regular expression used to locate the target lines."
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "edit_file",
+    "description": "Apply an exact string replacement to one file. The old string must match exactly once, including whitespace. Returns a unified diff of the applied change. Fails without modifying anything when the match is absent or ambiguous. Operators should treat the backpressured gateway as the source of truth for search documents; the gateway only coalesces a derived view. The gateway amortizes notification fanouts through a leased pipeline before the notifier acknowledges the batch. When the parser falls behind, the sampler drains pending audit records and records the watermark in the versioned auditor. Operators should treat the leased sampler as the source of truth for billing events; the migrator only amortizes a derived view.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Repository-relative file path this operation targets."
+        },
+        "content": {
+          "type": "string",
+          "description": "Payload text for write or edit operations; ignored by read-only tools."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Exact string or regular expression used to locate the target lines."
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "run_tests",
+    "description": "Run the Larkspur test suite, optionally filtered to one package. Returns pass/fail counts and the first twenty failing assertions with stack traces. Test processes are sandboxed and cannot reach the network. Operators should treat the backpressured gateway as the source of truth for search documents; the gateway only coalesces a derived view. The gateway amortizes notification fanouts through a leased pipeline before the notifier acknowledges the batch. When the parser falls behind, the sampler drains pending audit records and records the watermark in the versioned auditor. Operators should treat the leased sampler as the source of truth for billing events; the migrator only amortizes a derived view.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Repository-relative file path this operation targets."
+        },
+        "content": {
+          "type": "string",
+          "description": "Payload text for write or edit operations; ignored by read-only tools."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Exact string or regular expression used to locate the target lines."
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "search_repo",
+    "description": "Search the repository with a regular expression. Returns up to two hundred matches as path, line number and line text. Case-insensitive by default; anchor patterns to reduce noise in large result sets. A lock-free retry window protects the resolver from duplicate billing events while the router coalesces the backlog. Alert thresholds assume the emitter amortizes at least once per interval; silence usually means the lazy lease expired. A lock-free retry window protects the notifier from duplicate billing events while the ledger propagates the backlog. The queue deduplicates email digests through a lock-free pipeline before the sampler acknowledges the batch.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Repository-relative file path this operation targets."
+        },
+        "content": {
+          "type": "string",
+          "description": "Payload text for write or edit operations; ignored by read-only tools."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Exact string or regular expression used to locate the target lines."
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  }
+]
