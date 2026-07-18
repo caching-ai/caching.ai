@@ -411,8 +411,6 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
 
       <AccountProviderKeys />
 
-      <CacheVisualGuide />
-
       {!loaded ? (
         <p className="text-mute text-[16px]">{t.loading}</p>
       ) : keys.length === 0 ? (
@@ -493,6 +491,8 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
                   {t.advancedToggle}
                 </summary>
                 <div className="mt-5 flex flex-col gap-5">
+                {/* the visual explainer lives with the settings it explains */}
+                <CacheVisualGuide />
                 <label className="flex items-start gap-3">
                   <input type="checkbox" className="mt-1 h-4 w-4 accent-[#080808]"
                     checked={k.auto_cache_control}
