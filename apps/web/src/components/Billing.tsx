@@ -128,17 +128,24 @@ export default function Billing({ tossClientKey }: { tossClientKey: string }) {
   const t = dict.console.billing;
   const tips = dict.console.tips;
   const [periods, setPeriods] = useState<Period[] | null>(null);
+  const [locked, setLocked] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     fetch("/api/billing")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
-      .then((j) => setPeriods(j.periods))
+      .then((j) => { setPeriods(j.periods); setLocked(j.locked === true); })
       .catch(() => setError(t.loadError));
   }, []);
 
   if (error) return <p className="text-error">{error}</p>;
   if (!periods) return <p className="text-mute">{t.loading}</p>;
+
+  const lockedBanner = locked ? (
+    <div className="rounded-card border border-warn/50 bg-warn/10 p-4 text-[15px] leading-relaxed text-ink" data-testid="billing-locked">
+      ⏸ {t.lockedBanner}
+    </div>
+  ) : null;
 
   const current = periods[0];
   const statusLabel = (s: string) =>
@@ -156,6 +163,7 @@ export default function Billing({ tossClientKey }: { tossClientKey: string }) {
         <h1 className="text-display-md text-ink">{t.title}</h1>
         <p className="mt-1 text-[16px] text-mute">{t.sub}</p>
       </header>
+      {lockedBanner}
 
       <section className="grid gap-6 md:grid-cols-3">
         <div className="card">

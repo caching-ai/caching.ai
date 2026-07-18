@@ -17,5 +17,6 @@ export async function GET() {
       ORDER BY period_start DESC LIMIT 24`,
     [sess.uid]
   );
-  return NextResponse.json({ periods: rows });
+  const u = await db().query("SELECT billing_locked FROM users WHERE id=$1", [sess.uid]);
+  return NextResponse.json({ periods: rows, locked: u.rows[0]?.billing_locked === true });
 }

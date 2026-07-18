@@ -113,8 +113,10 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
             k.keepalive_hold_until
        FROM keepalive_state ks
        JOIN api_keys k ON k.id = ks.api_key_id
+       JOIN users u ON u.id = k.user_id
        LEFT JOIN user_provider_keys ua ON ua.user_id = k.user_id AND ua.provider = 'anthropic'
       WHERE k.keepalive_enabled = true
+        AND u.billing_locked = false
         AND k.revoked_at IS NULL
         AND ks.provider = 'anthropic'
         AND ks.encrypted_prefix IS NOT NULL

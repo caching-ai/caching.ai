@@ -8,7 +8,7 @@ import { serve, type ServerType } from "@hono/node-server";
 import { migrate, setPool, sha256Hex, encrypt, generateApiKey } from "@caching/shared";
 import { buildApp } from "../src/app.js";
 import { billingSweep } from "../src/billing.js";
-import { chargeSweep } from "../src/charge.js";
+import { chargeSweep, retryFailedCharges, dunningSweep } from "../src/charge.js";
 import { weeklyStatsFor } from "../src/emailReport.js";
 import { startMockOpenAI } from "./mock-providers.js";
 
@@ -320,7 +320,7 @@ test("chargeSweep: no card on file → no_payment_method, retried when card appe
   assert.equal(rows[0].status, "paid");
 });
 
-test("chargeSweep: declined card → charge_failed, never re-attempted automatically", async () => {
+test("chargeSweep: declined card → charge_failed; the charge sweep itself never re-attempts (the 72h retry sweep does)", async () => {
   const userId = await newUser("charge-fail@t.co");
   await pool.query(
     `INSERT INTO payment_methods(user_id, psp, stripe_customer_id, stripe_payment_method_id)
@@ -363,4 +363,114 @@ test("weekly report: opted-out users are excluded", async () => {
   await pool.query("UPDATE users SET report_opt_out=true WHERE id=$1", [userId]);
   stats = await weeklyStatsFor(pool);
   assert.ok(!stats.some((s) => s.userId === userId));
+});
+
+
+// ---------- dunning: retry → pause → auto-restore ----------
+
+test("retryFailedCharges: declined card recovers on the 72h retry", async () => {
+  const userId = await newUser("dunning-retry@t.co");
+  await pool.query(
+    `INSERT INTO payment_methods(user_id, psp, stripe_customer_id, stripe_payment_method_id)
+     VALUES($1,'stripe','cus_r1','pm_r1')`,
+    [userId]
+  );
+  await insertClosedPeriod(userId, 25);
+  psp.stripeFail = true;
+  const deps = { pool, encryptionKey: ENC_KEY, stripeSecretKey: "sk", stripeUrl, tossUrl, minChargeUsd: 5 };
+  await chargeSweep(deps);
+  psp.stripeFail = false;
+
+  // too early: nothing happens
+  assert.equal(await retryFailedCharges(deps), 0);
+
+  // 73h later the retry fires and succeeds
+  const later = new Date(Date.now() + 73 * 3600_000);
+  const n = await retryFailedCharges({ ...deps, now: () => later });
+  assert.ok(n >= 1, "this user's charge must be among the recovered");
+  const { rows } = await pool.query(
+    "SELECT status FROM billing_periods WHERE user_id=$1", [userId]);
+  assert.equal(rows[0].status, "paid");
+  const { rows: ch } = await pool.query(
+    "SELECT status, attempts FROM billing_charges WHERE user_id=$1", [userId]);
+  assert.equal(ch[0].status, "paid");
+  assert.equal(ch[0].attempts, 2);
+});
+
+test("retryFailedCharges: stops after max attempts", async () => {
+  const userId = await newUser("dunning-max@t.co");
+  await pool.query(
+    `INSERT INTO payment_methods(user_id, psp, stripe_customer_id, stripe_payment_method_id)
+     VALUES($1,'stripe','cus_r2','pm_r2')`,
+    [userId]
+  );
+  const periodStart = await insertClosedPeriod(userId, 25);
+  await pool.query(
+    `INSERT INTO billing_charges(user_id, period_start, amount_usd, charged_amount, currency, psp, status, attempts, last_attempt_at)
+     VALUES($1,$2::date,25,25,'USD','stripe','failed',4, now() - interval '10 days')`,
+    [userId, periodStart]
+  );
+  const callsBefore = psp.stripeCalls.length;
+  const deps = { pool, encryptionKey: ENC_KEY, stripeSecretKey: "sk", stripeUrl, tossUrl };
+  assert.equal(await retryFailedCharges({ ...deps, now: () => new Date(Date.now() + 30 * 86400_000) }), 0);
+  assert.equal(psp.stripeCalls.length, callsBefore, "exhausted charges are left to dunning");
+});
+
+test("dunning: past-grace delinquency pauses optimization, payment auto-restores it", async () => {
+  process.env.KEY_CACHE_TTL_MS = "0";
+  const userId = await newUser("dunning-lock@t.co");
+  const ck = generateApiKey();
+  await pool.query(
+    `INSERT INTO api_keys(user_id, key_hash, key_prefix_display, auto_cache_control, openai_key_encrypted)
+     VALUES($1,$2,'ck_…',true,$3)`,
+    [userId, sha256Hex(ck), encrypt("sk-openai-x", ENC_KEY)]
+  );
+  // delinquent: charge_failed, closed ~19 days ago (insertClosedPeriod = last month), fee $30 ≥ $10
+  const periodStart = await insertClosedPeriod(userId, 30);
+  await pool.query(
+    "UPDATE billing_periods SET status='charge_failed' WHERE user_id=$1", [userId]);
+
+  const deps = { pool, encryptionKey: ENC_KEY, stripeUrl, tossUrl };
+  const d1 = await dunningSweep(deps);
+  assert.ok(d1.locked >= 1);
+  let { rows } = await pool.query("SELECT billing_locked FROM users WHERE id=$1", [userId]);
+  assert.equal(rows[0].billing_locked, true);
+
+  // locked → gpt-5.6 request passes through with NO injection
+  const BIG = "You are a precise assistant. ".repeat(200);
+  await fetch(`${proxyUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ck}` },
+    body: JSON.stringify({ model: "gpt-5.6-sol", messages: [{ role: "system", content: BIG }, { role: "user", content: "q" }] }),
+  });
+  assert.equal(openaiState.bodies.at(-1).prompt_cache_key, undefined, "locked account: no injection");
+
+  // payment clears → unlocked on the next sweep, injection resumes
+  await pool.query("UPDATE billing_periods SET status='paid' WHERE user_id=$1 AND period_start=$2::date",
+    [userId, periodStart]);
+  const d2 = await dunningSweep(deps);
+  assert.ok(d2.unlocked >= 1);
+  ({ rows } = await pool.query("SELECT billing_locked FROM users WHERE id=$1", [userId]));
+  assert.equal(rows[0].billing_locked, false);
+  await fetch(`${proxyUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ck}` },
+    body: JSON.stringify({ model: "gpt-5.6-sol", messages: [{ role: "system", content: BIG }, { role: "user", content: "q2" }] }),
+  });
+  assert.match(openaiState.bodies.at(-1).prompt_cache_key ?? "", /^cai-/, "restored account: injection back on");
+});
+
+test("dunning: within the grace window nothing is paused", async () => {
+  const userId = await newUser("dunning-grace@t.co");
+  const start = new Date(Date.now() - 20 * 86400_000).toISOString().slice(0, 10);
+  const end = new Date(Date.now() - 2 * 86400_000).toISOString().slice(0, 10); // closed 2 days ago
+  await pool.query(
+    `INSERT INTO billing_periods(user_id, period_start, period_end, gross_saved_usd,
+       keepalive_cost_usd, net_saved_usd, fee_usd, fee_rate, status)
+     VALUES($1,$2,$3,150,0,150,30,0.2,'charge_failed')`,
+    [userId, start, end]
+  );
+  await dunningSweep({ pool, encryptionKey: ENC_KEY, stripeUrl, tossUrl });
+  const { rows } = await pool.query("SELECT billing_locked FROM users WHERE id=$1", [userId]);
+  assert.equal(rows[0].billing_locked, false, "grace window must protect the account");
 });

@@ -263,7 +263,7 @@ export function buildApp(deps: AppDeps) {
   // Applies the hold and returns what the synthetic reply should say. Never
   // touches the upstream — the command itself costs nothing.
   async function applyWarmHold(key: ApiKeyRow, hold: WarmHold): Promise<HoldOutcome> {
-    if (!key.keepalive_enabled) return "keepalive_off";
+    if (!key.keepalive_enabled || key.billing_locked) return "keepalive_off";
     const { rows } = await pool.query(
       "SELECT 1 FROM keepalive_state WHERE api_key_id=$1 AND encrypted_prefix IS NOT NULL LIMIT 1",
       [key.id]
@@ -303,7 +303,7 @@ export function buildApp(deps: AppDeps) {
 
     // injection auto-pauses while the prefix keeps changing (cache breaker):
     // nobody can cache it, so breakpoints would only buy write premiums
-    if (key.auto_cache_control && !injectionPaused(key.id, "anthropic", model)) {
+    if (key.auto_cache_control && !key.billing_locked && !injectionPaused(key.id, "anthropic", model)) {
       body = injectCacheControl(body, model, key.anthropic_cache_ttl).body;
     }
 
@@ -452,7 +452,7 @@ export function buildApp(deps: AppDeps) {
     // live: 0 → 99.6% of the prefix). Caller-set params always pass through.
     // same breaker auto-pause as Anthropic: a changing prefix can't be cached,
     // so 5.6 breakpoints would only buy 1.25x write premiums
-    if (!isGrok && key.auto_cache_control && !injectionPaused(key.id, provider, model)) {
+    if (!isGrok && key.auto_cache_control && !key.billing_locked && !injectionPaused(key.id, provider, model)) {
       if (isChat) body = injectOpenAIBreakpoint(body, model).body;
       else if (isResponsesPath) body = injectOpenAIBreakpointResponses(body, model).body;
     }

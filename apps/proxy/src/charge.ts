@@ -1,5 +1,6 @@
 import type pg from "pg";
 import { decrypt } from "@caching/shared";
+import { sendViaResend } from "./emailReport.js";
 
 // Postpaid performance-fee collection. Runs after a billing period fully
 // closes (period_end < today): charges the stored card via the user's PSP —
@@ -22,6 +23,158 @@ export interface ChargeDeps {
   stripeUrl?: string;
   tossUrl?: string;
   now?: () => Date;
+  /** dunning emails (skipped when absent — locking still applies) */
+  resendApiKey?: string;
+  resendUrl?: string;
+}
+
+// Dunning policy (industry standard: retry → remind → pause → auto-restore).
+// Optimization features pause only past BOTH thresholds; traffic always
+// passes through untouched, so a delinquent account loses new savings —
+// never service.
+export const DUNNING_MIN_USD = Number(process.env.DUNNING_MIN_USD ?? 10);
+export const DUNNING_GRACE_DAYS = Number(process.env.DUNNING_GRACE_DAYS ?? 14);
+const RETRY_EVERY_MS = 72 * 60 * 60 * 1000;
+const MAX_ATTEMPTS = 4;
+
+const DUNNING_STRINGS = {
+  ko: {
+    lockSubject: "[Caching.ai] 결제 확인이 필요해서 자동 절약을 잠시 멈췄어요",
+    lockBody: (usd: string) => `
+      <p>안녕하세요, Caching.ai예요.</p>
+      <p>정산되지 않은 성과 수수료 <b>$${usd}</b>가 유예 기간(${DUNNING_GRACE_DAYS}일)을 지나서,
+      계정의 <b>자동 절약 기능(캐시 주입·캐시 워머)을 잠시 멈췄어요</b>.
+      API 트래픽은 평소처럼 그대로 통과하니 서비스가 끊기지는 않아요 — 새 절감만 생기지 않아요.</p>
+      <p><a href="https://caching.ai/console/billing">콘솔 &gt; 요금</a>에서 카드를 등록하거나
+      결제 수단을 갱신해 주시면, 다음 정산 사이클에서 자동으로 다시 켜드려요.</p>`,
+    unlockSubject: "[Caching.ai] 자동 절약이 다시 켜졌어요",
+    unlockBody: () => `
+      <p>결제가 확인돼서 자동 절약 기능을 다시 켰어요. 이용해 주셔서 고마워요!</p>
+      <p><a href="https://caching.ai/console">대시보드</a>에서 절감이 다시 쌓이는 걸 확인하실 수 있어요.</p>`,
+  },
+  en: {
+    lockSubject: "[Caching.ai] Savings paused — payment needs attention",
+    lockBody: (usd: string) => `
+      <p>Hi, this is Caching.ai.</p>
+      <p>An unsettled performance fee of <b>$${usd}</b> has passed the ${DUNNING_GRACE_DAYS}-day grace window,
+      so we've <b>paused the account's optimization features</b> (cache injection and the Cache Warmer).
+      Your API traffic still passes through untouched — nothing breaks, you just stop accruing new savings.</p>
+      <p>Add or update a card in <a href="https://caching.ai/console/billing">Console &gt; Billing</a> and
+      everything switches back on automatically on the next settlement cycle.</p>`,
+    unlockSubject: "[Caching.ai] Savings are back on",
+    unlockBody: () => `
+      <p>Payment confirmed — your optimization features are switched back on. Thank you!</p>
+      <p>Watch the savings accrue again on your <a href="https://caching.ai/console">dashboard</a>.</p>`,
+  },
+};
+
+async function sendDunningEmail(
+  deps: ChargeDeps, email: string, locale: string, kind: "lock" | "unlock", usd: string
+): Promise<void> {
+  if (!deps.resendApiKey) return;
+  const t = locale === "ko" ? DUNNING_STRINGS.ko : DUNNING_STRINGS.en;
+  const subject = kind === "lock" ? t.lockSubject : t.unlockSubject;
+  const html = kind === "lock" ? t.lockBody(usd) : t.unlockBody();
+  try {
+    await sendViaResend(
+      { pool: deps.pool, resendApiKey: deps.resendApiKey, resendUrl: deps.resendUrl, fetchImpl: deps.fetchImpl },
+      email, subject, html
+    );
+  } catch (e) {
+    console.error("dunning email failed:", (e as Error).message);
+  }
+}
+
+/**
+ * Auto-retry failed card charges every ~72h, up to MAX_ATTEMPTS total —
+ * transient declines (expired card replaced, balance topped up) recover
+ * without ops intervention.
+ */
+export async function retryFailedCharges(deps: ChargeDeps): Promise<number> {
+  const { pool } = deps;
+  const doFetch = deps.fetchImpl ?? fetch;
+  const nowMs = (deps.now ? deps.now() : new Date()).getTime();
+  const { rows } = await pool.query(
+    `SELECT bc.id AS charge_id, bc.attempts, bp.user_id, bp.period_start::text AS period_start, bp.fee_usd,
+            pm.psp, pm.stripe_customer_id, pm.stripe_payment_method_id,
+            pm.toss_billing_key_encrypted, pm.toss_customer_key
+       FROM billing_charges bc
+       JOIN billing_periods bp ON bp.user_id = bc.user_id AND bp.period_start = bc.period_start
+       LEFT JOIN payment_methods pm ON pm.user_id = bc.user_id
+      WHERE bc.status = 'failed' AND bc.attempts < $1
+        AND bc.last_attempt_at <= to_timestamp($2 / 1000.0)`,
+    [MAX_ATTEMPTS, nowMs - RETRY_EVERY_MS]
+  );
+  let recovered = 0;
+  for (const p of rows) {
+    // claim the retry slot first so concurrent sweeps can't double-charge
+    const claim = await pool.query(
+      `UPDATE billing_charges SET attempts = attempts + 1, last_attempt_at = to_timestamp($2 / 1000.0)
+        WHERE id = $1 AND status = 'failed' AND attempts = $3 RETURNING id`,
+      [p.charge_id, nowMs, p.attempts]
+    );
+    if (!claim.rows[0]) continue;
+
+    const fee = Number(p.fee_usd);
+    const fx = deps.fxKrwPerUsd ?? 1400;
+    let result: { ok: boolean; ref?: string; error?: string };
+    try {
+      result = p.psp === "toss" && p.toss_billing_key_encrypted && deps.tossSecretKey
+        ? await chargeToss(deps, p as any, Math.round(fee * fx), doFetch)
+        : p.psp === "stripe" && p.stripe_payment_method_id && deps.stripeSecretKey
+          ? await chargeStripe(deps, p as any, fee, doFetch)
+          : { ok: false, error: "no usable payment method" };
+    } catch (e) {
+      result = { ok: false, error: (e as Error).message.slice(0, 300) };
+    }
+    await pool.query(
+      `UPDATE billing_charges SET status=$2, psp_ref=COALESCE($3, psp_ref), error=$4 WHERE id=$1`,
+      [p.charge_id, result.ok ? "paid" : "failed", result.ref ?? null, result.error ?? null]
+    );
+    await pool.query(
+      `UPDATE billing_periods SET status=$3 WHERE user_id=$1 AND period_start=$2::date`,
+      [p.user_id, p.period_start, result.ok ? "paid" : "charge_failed"]
+    );
+    if (result.ok) recovered++;
+  }
+  return recovered;
+}
+
+/**
+ * Lock/unlock pass. Locked = optimization paused (checked on the hot path via
+ * users.billing_locked); pass-through service is never interrupted. A user is
+ * locked once delinquent fees (charge_failed / no_payment_method periods past
+ * the grace window) reach DUNNING_MIN_USD, and unlocked the moment they
+ * don't. Transition emails only.
+ */
+export async function dunningSweep(deps: ChargeDeps): Promise<{ locked: number; unlocked: number }> {
+  const { pool } = deps;
+  const nowIso = (deps.now ? deps.now() : new Date()).toISOString();
+  const delinquentSql = `
+    SELECT COALESCE(sum(bp.fee_usd), 0) FROM billing_periods bp
+     WHERE bp.user_id = u.id
+       AND bp.status IN ('charge_failed', 'no_payment_method')
+       AND bp.period_end < ($1::timestamptz)::date - $2::int`;
+
+  const lockedRows = await pool.query(
+    `UPDATE users u SET billing_locked = true
+      WHERE u.billing_locked = false AND (${delinquentSql}) >= $3
+      RETURNING u.id, u.email, u.locale, (${delinquentSql}) AS due`,
+    [nowIso, DUNNING_GRACE_DAYS, DUNNING_MIN_USD]
+  );
+  for (const r of lockedRows.rows) {
+    await sendDunningEmail(deps, r.email, r.locale ?? "en", "lock", Number(r.due).toFixed(2));
+  }
+  const unlockedRows = await pool.query(
+    `UPDATE users u SET billing_locked = false
+      WHERE u.billing_locked = true AND (${delinquentSql}) < $3
+      RETURNING u.id, u.email, u.locale`,
+    [nowIso, DUNNING_GRACE_DAYS, DUNNING_MIN_USD]
+  );
+  for (const r of unlockedRows.rows) {
+    await sendDunningEmail(deps, r.email, r.locale ?? "en", "unlock", "0");
+  }
+  return { locked: lockedRows.rowCount ?? 0, unlocked: unlockedRows.rowCount ?? 0 };
 }
 
 interface DuePeriod {
@@ -156,10 +309,19 @@ export async function chargeSweep(deps: ChargeDeps): Promise<number> {
   return charged;
 }
 
+async function fullChargePass(deps: ChargeDeps): Promise<void> {
+  await chargeSweep(deps);
+  await retryFailedCharges(deps);
+  const d = await dunningSweep(deps);
+  if (d.locked || d.unlocked) {
+    console.log(`dunning: ${d.locked} account(s) paused, ${d.unlocked} restored`);
+  }
+}
+
 export function startChargeLoop(deps: ChargeDeps, intervalMs = 6 * 60 * 60 * 1000): NodeJS.Timeout {
-  chargeSweep(deps).catch((e) => console.error("charge sweep error:", e.message));
+  fullChargePass(deps).catch((e) => console.error("charge sweep error:", e.message));
   const t = setInterval(() => {
-    chargeSweep(deps).catch((e) => console.error("charge sweep error:", e.message));
+    fullChargePass(deps).catch((e) => console.error("charge sweep error:", e.message));
   }, intervalMs);
   t.unref?.();
   return t;

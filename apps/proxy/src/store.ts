@@ -6,6 +6,7 @@ import { recordRequestMetric } from "./metrics.js";
 export interface ApiKeyRow {
   id: number;
   user_id: number;
+  billing_locked: boolean;
   anthropic_key_encrypted: string | null;
   openai_key_encrypted: string | null;
   gemini_key_encrypted: string | null;
@@ -52,10 +53,12 @@ export async function findApiKey(pool: pg.Pool, rawKey: string): Promise<ApiKeyR
   if (hit && hit.exp > nowMs) return hit.row;
   try {
     const { rows } = await pool.query(
-      `SELECT k.id, k.user_id, ${PROVIDER_KEY_FALLBACK},
+      `SELECT k.id, k.user_id, u.billing_locked, ${PROVIDER_KEY_FALLBACK},
               k.auto_cache_control, k.keepalive_enabled, k.keepalive_budget_usd_daily,
               k.anthropic_cache_ttl, k.openai_cache_retention
-         FROM api_keys k ${PROVIDER_KEY_JOINS}
+         FROM api_keys k
+         JOIN users u ON u.id = k.user_id
+         ${PROVIDER_KEY_JOINS}
         WHERE k.key_hash=$1 AND k.revoked_at IS NULL`,
       [hash]
     );
