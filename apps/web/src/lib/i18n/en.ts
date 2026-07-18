@@ -567,6 +567,7 @@ export const en = {
     title: "Your keys and prompts, handled like production secrets",
         lead: "Requests travel on YOUR provider keys, straight to the provider — we never resell models or sit on your data. Bodies pass through byte-for-byte and are never stored; what remains is numbers (token counts, latency, prefix hashes). Want zero third parties? Self-host the exact same code.",
     items: [
+      { title: "Caches can never mix between users", body: "The cache itself lives at the provider, scoped to YOUR API key and account. We never cache responses ourselves or serve one user's cache to another — there is no shared cache to mix. It's open source: verify it in the code." },
       { title: "Your keys stay yours", body: "Provider keys are encrypted at rest with AES-256-GCM, used only to forward your requests, and never logged." },
       { title: "Prompts are never stored", body: "We keep token counts, latency, status codes, and prefix hashes — not your content. The one exception, the Cache Warmer, is opt-in and labeled right on the toggle." },
       { title: "Byte-identical passthrough", body: "Responses stream through unbuffered, byte for byte. Your app sees exactly what the provider sent — analytics happen after the response is on its way." },

@@ -568,6 +568,7 @@ export const es: Dict = {
     title: "Tus claves y prompts, tratados como secretos de producción",
         lead: "Las peticiones viajan con TUS claves de proveedor, directas al proveedor — no revendemos modelos ni retenemos tus datos. Los cuerpos pasan byte a byte y nunca se guardan; lo que queda son números (tokens, latencia, hashes). ¿Cero terceros? Autoaloja exactamente el mismo código.",
     items: [
+      { title: "Las cachés nunca se mezclan entre usuarios", body: "La caché vive en el proveedor, ligada a TU clave de API y a tu cuenta. Nosotros nunca cacheamos respuestas ni servimos la caché de un usuario a otro — no existe una caché compartida que mezclar. Es open source: compruébalo en el código." },
       { title: "Tus claves siguen siendo tuyas", body: "Las claves de proveedor se cifran en reposo con AES-256-GCM, se usan solo para reenviar tus peticiones y nunca se registran en logs." },
       { title: "Los prompts nunca se almacenan", body: "Guardamos recuentos de tokens, latencia, códigos de estado y hashes de prefijos — no tu contenido. La única excepción, Keep-Alive, es opt-in y está indicada en el propio interruptor." },
       { title: "Paso byte a byte", body: "Las respuestas fluyen sin buffering, byte a byte. Tu app ve exactamente lo que envió el proveedor — la analítica ocurre cuando la respuesta ya va de camino." },
