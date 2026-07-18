@@ -14,22 +14,26 @@ export default function ConsoleNav({
   const { dict } = useI18n();
   const t = dict.console.nav;
   const to = dict.console.org.nav;
-  const items: { href: string; label: string }[] = [
-    { href: "/console", label: t.dashboard },
-    { href: "/console/keys", label: t.keys },
-    { href: "/console/billing", label: t.billing },
-  ];
-  if (workspace === "org" && orgAdmin) {
-    items.splice(1, 0,
-      { href: "/console/org", label: to.overview },
-      { href: "/console/org/members", label: to.members },
-      { href: "/console/org/policies", label: to.policies },
-    );
-    items.push(
-      { href: "/console/org/audit", label: to.audit },
-      { href: "/console/org/settings", label: to.settings },
-    );
-  }
+  // Team workspace: admins get the team dashboard as THE dashboard — the
+  // personal one is hidden (its numbers live in the member table). Members
+  // keep their own view, labeled "my usage" so it can't be mistaken for a
+  // team-wide picture.
+  const items: { href: string; label: string }[] =
+    workspace === "org" && orgAdmin
+      ? [
+          { href: "/console/org", label: to.overview },
+          { href: "/console/org/members", label: to.members },
+          { href: "/console/org/policies", label: to.policies },
+          { href: "/console/keys", label: t.keys },
+          { href: "/console/billing", label: t.billing },
+          { href: "/console/org/audit", label: to.audit },
+          { href: "/console/org/settings", label: to.settings },
+        ]
+      : [
+          { href: "/console", label: workspace === "org" ? t.myUsage : t.dashboard },
+          { href: "/console/keys", label: t.keys },
+          { href: "/console/billing", label: t.billing },
+        ];
   items.push({ href: "/docs", label: t.docs });
   return (
     <nav className="flex gap-1 overflow-x-auto px-3 py-3 md:flex-col md:overflow-visible">

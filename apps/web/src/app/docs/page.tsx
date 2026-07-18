@@ -18,9 +18,15 @@ export default async function DocsPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
-      <Link href="/" aria-label="caching.ai">
-        <img src="/logo.png" alt="caching.ai" className="h-8 w-auto" />
-      </Link>
+      <div className="flex items-center justify-between gap-4">
+        <Link href="/" aria-label="caching.ai">
+          <img src="/logo.png" alt="caching.ai" className="h-8 w-auto" />
+        </Link>
+        <nav className="flex items-center gap-5 text-[15px]">
+          <Link href="/" className="text-body-mid hover:text-ink">{t.navHome}</Link>
+          <Link href="/console" className="text-body-mid hover:text-ink">{t.navConsole}</Link>
+        </nav>
+      </div>
       <h1 className="mt-8 text-display-lg text-ink">{t.title}</h1>
       <p className="mt-3 text-[17px] text-body-mid">{t.intro}</p>
 

@@ -426,7 +426,9 @@ test("keepalive: 24h-retention openai keys are skipped; anthropic 1h TTL pings h
      VALUES($1,$2,'ck_…',true,$3,$4,'1h','24h') RETURNING id`,
     [u.rows[0].id, sha256Hex(kaCk), encrypt("sk-ant-x", ENC_KEY), encrypt("sk-openai-x", ENC_KEY)]
   );
-  const base = Date.now();
+  // anchored to 03:00 UTC today — these simulated timelines span an hour or
+  // more, and crossing UTC midnight resets pings_today/spend_day mid-test
+  const base = new Date().setUTCHours(3, 0, 0, 0);
   const anthroPrefix = encrypt(JSON.stringify({ model: "claude-sonnet-4-5", messages: [{ role: "user", content: "ctx" }] }), ENC_KEY);
   const openaiPrefix = encrypt(JSON.stringify({ model: "gpt-4o", messages: [{ role: "system", content: "ctx" }] }), ENC_KEY);
   await pool.query(
@@ -462,7 +464,9 @@ test("keepalive: daily budget guard — at budget no ping, raised budget pings",
      VALUES($1,$2,'ck_…',true,1.0,$3) RETURNING id`,
     [u.rows[0].id, sha256Hex(generateApiKey()), encrypt("sk-ant-x", ENC_KEY)]
   );
-  const base = Date.now();
+  // anchored to 03:00 UTC today — these simulated timelines span an hour or
+  // more, and crossing UTC midnight resets pings_today/spend_day mid-test
+  const base = new Date().setUTCHours(3, 0, 0, 0);
   const today = new Date(base).toISOString().slice(0, 10);
   const anthroPrefix = encrypt(JSON.stringify({ model: "claude-sonnet-4-5", messages: [{ role: "user", content: "ctx" }] }), ENC_KEY);
   await pool.query(
@@ -574,7 +578,9 @@ test("warm hold: sweep pings past give-up while held, stops when hold expires", 
      VALUES($1,$2,'ck_…',true,$3) RETURNING id`,
     [u.rows[0].id, sha256Hex(generateApiKey()), encrypt("sk-ant-x", ENC_KEY)]
   );
-  const base = Date.now();
+  // anchored to 03:00 UTC today — these simulated timelines span an hour or
+  // more, and crossing UTC midnight resets pings_today/spend_day mid-test
+  const base = new Date().setUTCHours(3, 0, 0, 0);
   const twoHoursAgo = base - 2 * 3600_000; // far past the 62.5min give-up
   await pool.query(
     `INSERT INTO keepalive_state(api_key_id, provider, encrypted_prefix, prefix_token_estimate, last_request_at)
@@ -681,7 +687,9 @@ test("keepalive: legacy non-anthropic state rows are never pinged — warming is
      VALUES($1,$2,'ck_…',true,$3,$4) RETURNING id`,
     [u.rows[0].id, sha256Hex(generateApiKey()), encrypt("sk-openai-x", ENC_KEY), encrypt("gm-key-x", ENC_KEY)]
   );
-  const base = Date.now();
+  // anchored to 03:00 UTC today — these simulated timelines span an hour or
+  // more, and crossing UTC midnight resets pings_today/spend_day mid-test
+  const base = new Date().setUTCHours(3, 0, 0, 0);
   // rows a pre-migration deployment might have left behind
   const mkState = (provider: string, model: string, prefix: object) =>
     pool.query(
@@ -712,7 +720,9 @@ test("warm hold ≥30min on a 5m key: ONE 1h-TTL upgrade ping now, then 55m cade
      VALUES($1,$2,'ck_…',true,$3,'5m') RETURNING id`,
     [u.rows[0].id, sha256Hex(generateApiKey()), encrypt("sk-ant-x", ENC_KEY)]
   );
-  const base = Date.now();
+  // anchored to 03:00 UTC today — these simulated timelines span an hour or
+  // more, and crossing UTC midnight resets pings_today/spend_day mid-test
+  const base = new Date().setUTCHours(3, 0, 0, 0);
   const prefix = {
     model: "claude-sonnet-4-5",
     system: [{ type: "text", text: "ctx", cache_control: { type: "ephemeral" } }],

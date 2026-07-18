@@ -69,10 +69,16 @@ export default function WorkspaceSwitcher({
     const j = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) return setError(j.error ?? t.switchFailed);
-    setOpen(false);
     setCreating(false);
     router.push("/console");
     router.refresh();
+  }
+
+  function closeCreate() {
+    if (busy) return;
+    setCreating(false);
+    setName("");
+    setError("");
   }
 
   const current = active === "org" && org ? org.name : t.personal;
@@ -115,34 +121,53 @@ export default function WorkspaceSwitcher({
               </span>
               {active === "org" && <Check />}
             </button>
-          ) : creating ? (
-            <div className="p-2">
-              <p className="mb-2 text-[12px] leading-relaxed text-mute">{t.createSub}</p>
-              <input
-                autoFocus
-                className="input w-full !min-h-[36px] !py-1.5 text-[14px]"
-                placeholder={t.namePlaceholder}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && createOrg()}
-              />
-              {error && <p className="mt-1 text-[12px] text-error">{error}</p>}
-              <button
-                onClick={createOrg}
-                disabled={busy || name.trim().length < 2}
-                className="btn-primary mt-2 w-full !min-h-[36px] !py-1.5 text-[14px] disabled:opacity-50"
-              >
-                {busy ? t.creating : t.create}
-              </button>
-            </div>
           ) : (
             <button
-              onClick={() => setCreating(true)}
+              onClick={() => { setOpen(false); setCreating(true); }}
               className="flex w-full items-center gap-2 rounded-btn px-3 py-2 text-left text-[14px] text-body-mid hover:bg-canvas"
             >
               <span className="text-[16px] leading-none">+</span> {t.createCta}
             </button>
           )}
+        </div>
+      )}
+
+      {/* the dropdown only TRIGGERS creation — the name itself is asked in a
+          proper dialog so it doesn't cramp inside the switcher */}
+      {creating && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) closeCreate(); }}
+          onKeyDown={(e) => e.key === "Escape" && closeCreate()}
+          role="dialog"
+          aria-modal="true"
+          data-testid="create-org-dialog"
+        >
+          <div className="w-full max-w-sm rounded-card border border-hairline bg-canvas p-6 shadow-featured">
+            <h2 className="text-[19px] font-medium text-ink">{t.createTitle}</h2>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-mute">{t.createSub}</p>
+            <input
+              autoFocus
+              className="input mt-4 w-full"
+              placeholder={t.namePlaceholder}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && createOrg()}
+            />
+            {error && <p className="mt-2 text-[13px] text-error">{error}</p>}
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="btn-secondary !min-h-[38px] !px-4 !py-1.5 text-[14px]" onClick={closeCreate} disabled={busy}>
+                {dict.dialog.cancel}
+              </button>
+              <button
+                className="btn-primary !min-h-[38px] !px-4 !py-1.5 text-[14px] disabled:opacity-50"
+                onClick={createOrg}
+                disabled={busy || name.trim().length < 2}
+              >
+                {busy ? t.creating : t.create}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
-import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
-import { sha256Hex } from "@caching/shared";
 import { audit, requireOrgAdmin } from "@/lib/org";
-import { orgInviteEmail, sendEmail } from "@/lib/email";
+import { createOrgInvite } from "@/lib/orgInvite";
 import { clientIp, rateLimited } from "@/lib/ratelimit";
 
-const INVITE_TTL_DAYS = 7;
 const MAX_BATCH = 100;
-const BASE_URL = (process.env.PUBLIC_BASE_URL ?? "https://caching.ai").replace(/\/$/, "");
 
 export async function GET() {
   const r = await requireOrgAdmin();
@@ -55,47 +51,16 @@ export async function POST(req: Request) {
 
   const results: { email: string; status: string }[] = [];
   for (const raw of emails) {
-    const email = String(raw ?? "").toLowerCase().trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      results.push({ email: raw, status: "invalid" });
-      continue;
-    }
-    const existing = await db().query(
-      "SELECT org_id FROM users WHERE email=$1", [email]);
-    if (existing.rows[0]?.org_id === r.org.orgId) {
-      results.push({ email, status: "already_member" });
-      continue;
-    }
-
-    const token = "oiv_" + randomBytes(24).toString("hex");
-    const client = await db().connect();
-    try {
-      await client.query("BEGIN");
-      await client.query(
-        `UPDATE org_invites SET revoked_at=now()
-          WHERE org_id=$1 AND lower(email)=$2 AND accepted_at IS NULL AND revoked_at IS NULL`,
-        [r.org.orgId, email]
-      );
-      await client.query(
-        `INSERT INTO org_invites(org_id, email, role, department_id, token_hash, invited_by, expires_at)
-         VALUES($1,$2,$3,$4,$5,$6, now() + make_interval(days => $7))`,
-        [r.org.orgId, email, role, departmentId, sha256Hex(token), r.ws.session.uid, INVITE_TTL_DAYS]
-      );
-      await client.query("COMMIT");
-    } catch (e) {
-      await client.query("ROLLBACK").catch(() => {});
-      console.error("invite create failed:", (e as Error).message);
-      results.push({ email, status: "error" });
-      client.release();
-      continue;
-    }
-    client.release();
-
-    const joinUrl = `${BASE_URL}/org/join?token=${encodeURIComponent(token)}`;
-    const { subject, html } = orgInviteEmail(inviterLocale, r.org.orgName, r.ws.session.email, joinUrl);
-    // fire-and-forget — invite rows exist regardless; the console lists them
-    void sendEmail(email, subject, html).catch(() => {});
-    results.push({ email, status: "invited" });
+    const status = await createOrgInvite({
+      orgId: r.org.orgId,
+      orgName: r.org.orgName,
+      inviter: r.ws.session,
+      inviterLocale,
+      email: String(raw ?? ""),
+      role,
+      departmentId,
+    });
+    results.push({ email: String(raw ?? "").toLowerCase().trim() || String(raw), status });
   }
   await audit(r.org.orgId, r.ws.session, "invite.create", "", {
     invited: results.filter((x) => x.status === "invited").map((x) => x.email), role,

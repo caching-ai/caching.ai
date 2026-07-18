@@ -132,7 +132,7 @@ export const es: Dict = {
   },
   faq: {
     eyebrow: "FAQ",
-    title: "Preguntas, respondidas",
+    title: "Preguntas frecuentes",
     items: [
       {
         q: "¿Almacenáis mis prompts?",
@@ -213,7 +213,7 @@ export const es: Dict = {
     error: "Algo salió mal.",
   },
   console: {
-    nav: { dashboard: "Panel", keys: "Claves API", billing: "Facturación", docs: "Docs", signOut: "Cerrar sesión" },
+    nav: { dashboard: "Panel", myUsage: "Mi uso", keys: "Claves API", billing: "Facturación", docs: "Docs", signOut: "Cerrar sesión" },
     onboarding: {
       title: "Empieza a ahorrar en 2 minutos",
       sub: "Cuatro pasos — después, cada petición ahorra sola.",
@@ -554,7 +554,7 @@ export const es: Dict = {
         noDept: "Sin departamento",
         inviteCta: "Enviar invitaciones",
         inviteSending: "Enviando…",
-        inviteResults: { invited: "invitado", already_member: "ya es miembro", invalid: "dirección no válida", error: "falló" },
+        inviteResults: { invited: "invitado", already_member: "ya es miembro", invalid: "dirección no válida", error: "falló", invalid_role: "rol no válido", owner_only_role: "solo el propietario puede invitar admins" },
         pendingTitle: "Invitaciones pendientes",
         pendingEmpty: "No hay invitaciones pendientes.",
         revoke: "Retirar",
@@ -564,6 +564,12 @@ export const es: Dict = {
         deptAdd: "Añadir",
         deptDeleteConfirm: "¿Eliminar este departamento? Sus miembros simplemente quedan sin asignar.",
         deptMembers: "{n} miembro(s)",
+        csvTemplate: "Plantilla CSV",
+        csvUpload: "Subir CSV",
+        csvUploading: "Subiendo…",
+        memberCsvHint: "Invita en bloque — email,role,department:",
+        deptCsvHint: "Añade en bloque:",
+        deptCsvResult: "{created} añadidos · {exists} ya existían · {invalid} omitidos",
       },
       policies: {
         title: "Políticas y presupuestos",
@@ -615,6 +621,20 @@ export const es: Dict = {
         renameTitle: "Nombre del espacio",
         renameCta: "Guardar nombre",
         renamed: "Guardado.",
+        apiTitle: "API de administración",
+        apiSub: "Da de alta miembros y departamentos desde tus propios scripts o tu sistema de RR. HH. Los tokens actúan con permisos de admin (nunca de propietario) y cada llamada queda en el registro de auditoría.",
+        apiTokenPlaceholder: "Nombre del token, p. ej. hr-sync",
+        apiCreate: "Crear token",
+        apiShownOnce: "Cópialo ahora — este token solo se muestra una vez.",
+        apiEmpty: "Sin tokens activos.",
+        apiColName: "Nombre",
+        apiColCreated: "Creado",
+        apiColLastUsed: "Último uso",
+        apiNever: "nunca",
+        apiRevoke: "Revocar",
+        apiRevokeConfirm: "¿Revocar este token? Los scripts que lo usan dejan de funcionar al instante.",
+        apiExamplesTitle: "Cómo usar la API",
+        apiExamplesSub: "Envía el token en la cabecera Bearer. Los endpoints en bloque aceptan los mismos CSV que las plantillas de la consola.",
         dangerTitle: "Zona de peligro",
         deleteTitle: "Eliminar este espacio",
         deleteNote: "Los miembros conservan sus cuentas personales; las claves de equipo dejan de funcionar; el historial de facturación se conserva. Esto no se puede deshacer.",
@@ -659,7 +679,7 @@ export const es: Dict = {
   },
   featureDetail: {
     eyebrow: "EL PRODUCTO",
-    title: "Cuatro capas entre tú y el precio completo",
+    title: "Cuatro formas de reducir tu factura",
     analytics: {
       name: "Cache Analytics",
       headline: "Ve lo que la caché te ahorró de verdad",
@@ -735,6 +755,8 @@ export const es: Dict = {
   },
   docs: {
     title: "Quickstart",
+    navHome: "Inicio",
+    navConsole: "Consola",
     intro: "Caching.ai es un proxy drop-in para las APIs de Anthropic, OpenAI, Gemini y Grok. La integración es cambiar la base URL — tu código, SDK y formato de peticiones quedan exactamente igual.",
     s1t: "1. Crea una clave",
     s1b: "Regístrate, abre Consola → Claves API y registra tus propias claves de Anthropic / OpenAI / Gemini / Grok una sola vez en tu cuenta — se cifran con AES-256-GCM y solo se usan para reenviar tus peticiones. Luego crea una clave de Caching.ai (ck_…); cada clave que crees usará automáticamente las claves de proveedor de tu cuenta. ¿Prefieres probar sin tocar nada? Crea la clave en modo solo-observación — analítica completa, peticiones intactas — y activa las optimizaciones más adelante.",

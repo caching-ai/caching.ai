@@ -131,7 +131,7 @@ export const en = {
   },
   faq: {
     eyebrow: "FAQ",
-    title: "Questions, answered",
+    title: "Frequently asked questions",
     items: [
       {
         q: "Do you store my prompts?",
@@ -212,7 +212,7 @@ export const en = {
     error: "Something went wrong.",
   },
   console: {
-    nav: { dashboard: "Dashboard", keys: "API Keys", billing: "Billing", docs: "Docs", signOut: "Sign out" },
+    nav: { dashboard: "Dashboard", myUsage: "My usage", keys: "API Keys", billing: "Billing", docs: "Docs", signOut: "Sign out" },
     onboarding: {
       title: "Get to savings in 2 minutes",
       sub: "Four steps — after that, every request saves automatically.",
@@ -553,7 +553,7 @@ export const en = {
         noDept: "No department",
         inviteCta: "Send invites",
         inviteSending: "Sending…",
-        inviteResults: { invited: "invited", already_member: "already a member", invalid: "invalid address", error: "failed" },
+        inviteResults: { invited: "invited", already_member: "already a member", invalid: "invalid address", error: "failed", invalid_role: "invalid role", owner_only_role: "only the owner can invite admins" },
         pendingTitle: "Pending invites",
         pendingEmpty: "No pending invites.",
         revoke: "Withdraw",
@@ -563,6 +563,12 @@ export const en = {
         deptAdd: "Add",
         deptDeleteConfirm: "Delete this department? Its members simply become unassigned.",
         deptMembers: "{n} member(s)",
+        csvTemplate: "CSV template",
+        csvUpload: "Upload CSV",
+        csvUploading: "Uploading…",
+        memberCsvHint: "Invite in bulk — email,role,department:",
+        deptCsvHint: "Add in bulk:",
+        deptCsvResult: "{created} added · {exists} already existed · {invalid} skipped",
       },
       policies: {
         title: "Policies & budgets",
@@ -614,6 +620,20 @@ export const en = {
         renameTitle: "Workspace name",
         renameCta: "Save name",
         renamed: "Saved.",
+        apiTitle: "Admin API",
+        apiSub: "Provision members and departments from your own scripts or HR pipeline. Tokens act with admin rights (never owner), and every call lands in the audit log.",
+        apiTokenPlaceholder: "Token name, e.g. hr-sync",
+        apiCreate: "Create token",
+        apiShownOnce: "Copy it now — this token is shown only once.",
+        apiEmpty: "No active tokens.",
+        apiColName: "Name",
+        apiColCreated: "Created",
+        apiColLastUsed: "Last used",
+        apiNever: "never",
+        apiRevoke: "Revoke",
+        apiRevokeConfirm: "Revoke this token? Scripts using it stop working immediately.",
+        apiExamplesTitle: "Using the API",
+        apiExamplesSub: "Send the token as a Bearer header. The bulk endpoints take the same CSV files as the console templates.",
         dangerTitle: "Danger zone",
         deleteTitle: "Delete this workspace",
         deleteNote: "Members keep their personal accounts; team keys stop working; billing history is retained. This can't be undone.",
@@ -658,7 +678,7 @@ export const en = {
   },
   featureDetail: {
     eyebrow: "THE PRODUCT",
-    title: "Four layers between you and full price",
+    title: "Four ways we cut your bill",
     analytics: {
       name: "Cache Analytics",
       headline: "See what the cache actually saved you",
@@ -734,6 +754,8 @@ export const en = {
   },
   docs: {
     title: "Quickstart",
+    navHome: "Home",
+    navConsole: "Console",
     intro: "Caching.ai is a drop-in proxy for Anthropic, OpenAI, Gemini, and Grok APIs. Integration is a base-URL swap — your code, SDK, and request shapes stay exactly the same.",
     s1t: "1. Create a key",
     s1b: "Sign up, open Console → API Keys, and register your own Anthropic / OpenAI / Gemini / Grok keys once for your account — they're encrypted with AES-256-GCM and used only to forward your requests. Then create a Caching.ai key (ck_…); every key you create uses your account's provider keys automatically. Prefer a zero-touch trial? Create the key in observe-only mode — full analytics, no request modification — and turn on optimizations later.",

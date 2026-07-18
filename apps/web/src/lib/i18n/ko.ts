@@ -131,8 +131,8 @@ export const ko: Dict = {
     plannedBody: "한 달 수수료가 $5가 안 되면 면제하고, 다음 달로 넘기지도 않아요. 절감이 없으면 요금도 없어요. 이번 달 수수료는 대시보드에서 실시간으로 보여서 청구서가 놀랄 일이 없어요.",
   },
   faq: {
-    eyebrow: "자주 묻는 질문",
-    title: "궁금한 점, 답해드려요",
+    eyebrow: "FAQ",
+    title: "자주 묻는 질문",
     items: [
       {
         q: "프롬프트를 저장하나요?",
@@ -213,7 +213,7 @@ export const ko: Dict = {
     error: "문제가 생겼어요.",
   },
   console: {
-    nav: { dashboard: "대시보드", keys: "API 키", billing: "요금", docs: "문서", signOut: "로그아웃" },
+    nav: { dashboard: "대시보드", myUsage: "내 사용량", keys: "API 키", billing: "요금", docs: "문서", signOut: "로그아웃" },
     onboarding: {
       title: "2분이면 절약이 시작돼요",
       sub: "딱 4단계예요 — 그다음부터는 모든 요청이 알아서 아껴져요.",
@@ -554,7 +554,7 @@ export const ko: Dict = {
         noDept: "부서 없음",
         inviteCta: "초대 보내기",
         inviteSending: "보내는 중…",
-        inviteResults: { invited: "초대 완료", already_member: "이미 멤버예요", invalid: "잘못된 주소", error: "실패" },
+        inviteResults: { invited: "초대 완료", already_member: "이미 멤버예요", invalid: "잘못된 주소", error: "실패", invalid_role: "잘못된 역할", owner_only_role: "관리자 초대는 소유자만 할 수 있어요" },
         pendingTitle: "대기 중인 초대",
         pendingEmpty: "대기 중인 초대가 없어요.",
         revoke: "철회",
@@ -564,6 +564,12 @@ export const ko: Dict = {
         deptAdd: "추가",
         deptDeleteConfirm: "이 부서를 삭제할까요? 소속 멤버는 미지정 상태가 될 뿐이에요.",
         deptMembers: "{n}명",
+        csvTemplate: "CSV 양식 받기",
+        csvUpload: "CSV 업로드",
+        csvUploading: "올리는 중…",
+        memberCsvHint: "CSV로 한꺼번에 초대할 수 있어요 — email,role,department:",
+        deptCsvHint: "CSV로 한꺼번에 등록:",
+        deptCsvResult: "{created}개 추가 · {exists}개는 이미 있음 · {invalid}개 건너뜀",
       },
       policies: {
         title: "정책·예산",
@@ -615,6 +621,20 @@ export const ko: Dict = {
         renameTitle: "워크스페이스 이름",
         renameCta: "이름 저장",
         renamed: "저장했어요.",
+        apiTitle: "관리 API",
+        apiSub: "사내 스크립트나 HR 시스템에서 멤버·부서를 자동으로 등록할 수 있어요. 토큰은 관리자 권한으로만 움직이고(소유자 권한은 없어요), 모든 호출이 감사 로그에 남아요.",
+        apiTokenPlaceholder: "토큰 이름(예: hr-sync)",
+        apiCreate: "토큰 만들기",
+        apiShownOnce: "지금 복사해 두세요 — 이 토큰은 한 번만 보여드려요.",
+        apiEmpty: "활성 토큰이 없어요.",
+        apiColName: "이름",
+        apiColCreated: "만든 날짜",
+        apiColLastUsed: "마지막 사용",
+        apiNever: "사용 전",
+        apiRevoke: "폐기",
+        apiRevokeConfirm: "이 토큰을 폐기할까요? 이 토큰을 쓰는 스크립트는 바로 멈춰요.",
+        apiExamplesTitle: "API 사용법",
+        apiExamplesSub: "토큰을 Bearer 헤더로 보내면 돼요. 일괄 엔드포인트는 콘솔의 CSV 양식과 같은 파일을 그대로 받아요.",
         dangerTitle: "위험 구역",
         deleteTitle: "워크스페이스 삭제",
         deleteNote: "멤버의 개인 계정은 그대로 남아요. 팀 키는 멈추고, 정산 기록은 보존돼요. 되돌릴 수 없어요.",
@@ -659,7 +679,7 @@ export const ko: Dict = {
   },
   featureDetail: {
     eyebrow: "제품",
-    title: "요금을 줄여주는 네 가지 기능",
+    title: "청구서가 가벼워지는 네 가지 이유",
     analytics: {
       name: "캐시 분석",
       headline: "캐시가 실제로 아껴준 금액을 보세요",
@@ -735,6 +755,8 @@ export const ko: Dict = {
   },
   docs: {
     title: "퀵스타트",
+    navHome: "홈",
+    navConsole: "콘솔",
     intro: "Caching.ai는 Anthropic·OpenAI·Gemini·Grok API용 프록시예요. 연동은 베이스 URL 교체가 전부 — 코드, SDK, 요청 형식은 그대로예요.",
     s1t: "1. 키 만들기",
     s1b: "가입하고 콘솔 → API 키에서 본인의 Anthropic / OpenAI / Gemini / Grok 키를 계정에 한 번만 등록하세요 — AES-256-GCM으로 암호화되고, 요청 전달에만 쓰여요. 그다음 Caching.ai 키(ck_…)를 만들면, 만드는 모든 키가 계정의 모델 개발사 키를 자동으로 써요. 아무것도 안 건드리고 먼저 지켜보고 싶다면 키를 관찰 전용 모드로 만들어 보세요 — 분석은 전부 되고 요청은 그대로예요. 최적화는 나중에 켜면 돼요.",

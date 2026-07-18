@@ -131,8 +131,8 @@ export const zh: Dict = {
     plannedBody: "月费不足 $5 直接免除 — 绝不结转到下月。省不到，就不付。仪表盘全月实时显示当前费用，账单不会有任何意外。",
   },
   faq: {
-    eyebrow: "常见问题",
-    title: "有问必答",
+    eyebrow: "FAQ",
+    title: "常见问题",
     items: [
       {
         q: "你们会存储我的提示词吗?",
@@ -213,7 +213,7 @@ export const zh: Dict = {
     error: "出了点问题。",
   },
   console: {
-    nav: { dashboard: "仪表盘", keys: "API 密钥", billing: "账单", docs: "文档", signOut: "退出登录" },
+    nav: { dashboard: "仪表盘", myUsage: "我的用量", keys: "API 密钥", billing: "账单", docs: "文档", signOut: "退出登录" },
     onboarding: {
       title: "2 分钟开始省钱",
       sub: "只需 4 步 — 之后每个请求都会自动省钱。",
@@ -554,7 +554,7 @@ export const zh: Dict = {
         noDept: "无部门",
         inviteCta: "发送邀请",
         inviteSending: "发送中…",
-        inviteResults: { invited: "已邀请", already_member: "已是成员", invalid: "地址无效", error: "失败" },
+        inviteResults: { invited: "已邀请", already_member: "已是成员", invalid: "地址无效", error: "失败", invalid_role: "角色无效", owner_only_role: "只有所有者能邀请管理员" },
         pendingTitle: "待接受的邀请",
         pendingEmpty: "没有待接受的邀请。",
         revoke: "撤回",
@@ -564,6 +564,12 @@ export const zh: Dict = {
         deptAdd: "添加",
         deptDeleteConfirm: "删除这个部门? 其成员只会变为未分配。",
         deptMembers: "{n} 名成员",
+        csvTemplate: "下载 CSV 模板",
+        csvUpload: "上传 CSV",
+        csvUploading: "上传中…",
+        memberCsvHint: "用 CSV 批量邀请 — email,role,department:",
+        deptCsvHint: "用 CSV 批量添加:",
+        deptCsvResult: "新增 {created} 个 · {exists} 个已存在 · 跳过 {invalid} 个",
       },
       policies: {
         title: "策略与预算",
@@ -615,6 +621,20 @@ export const zh: Dict = {
         renameTitle: "工作区名称",
         renameCta: "保存名称",
         renamed: "已保存。",
+        apiTitle: "管理 API",
+        apiSub: "从你自己的脚本或 HR 系统自动添加成员和部门。令牌只有管理员权限（没有所有者权限），每次调用都会记入审计日志。",
+        apiTokenPlaceholder: "令牌名称（如 hr-sync）",
+        apiCreate: "创建令牌",
+        apiShownOnce: "请立即复制 — 此令牌只显示一次。",
+        apiEmpty: "暂无有效令牌。",
+        apiColName: "名称",
+        apiColCreated: "创建时间",
+        apiColLastUsed: "最近使用",
+        apiNever: "从未使用",
+        apiRevoke: "吊销",
+        apiRevokeConfirm: "吊销此令牌？使用它的脚本会立即失效。",
+        apiExamplesTitle: "API 用法",
+        apiExamplesSub: "把令牌放在 Bearer 请求头里即可。批量接口接受与控制台模板相同的 CSV 文件。",
         dangerTitle: "危险区",
         deleteTitle: "删除这个工作区",
         deleteNote: "成员保留各自的个人账号；团队密钥立即失效；账单历史会保留。此操作不可撤销。",
@@ -659,7 +679,7 @@ export const zh: Dict = {
   },
   featureDetail: {
     eyebrow: "产品",
-    title: "在你和全价之间，四道防线",
+    title: "让账单变小的四个功能",
     analytics: {
       name: "缓存分析",
       headline: "看到缓存真正帮你省下的钱",
@@ -735,6 +755,8 @@ export const zh: Dict = {
   },
   docs: {
     title: "快速上手",
+    navHome: "首页",
+    navConsole: "控制台",
     intro: "Caching.ai 是面向 Anthropic、OpenAI、Gemini、Grok API 的即插即用代理。集成只需替换 Base URL — 代码、SDK、请求格式都保持不变。",
     s1t: "1. 创建密钥",
     s1b: "注册后打开 控制台 → API 密钥，把你自己的 Anthropic / OpenAI / Gemini / Grok 密钥在账户里登记一次 — 以 AES-256-GCM 加密，仅用于转发你的请求。然后创建 Caching.ai 密钥（ck_…），你创建的每个密钥都会自动使用账户的服务商密钥。想先什么都不动地看看？用仅观察模式创建密钥 — 分析全都有，请求原样通过，优化以后再开。",

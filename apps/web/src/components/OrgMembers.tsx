@@ -1,8 +1,17 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "./I18nProvider";
 import { useConfirm } from "./ConfirmDialog";
 import { fmt } from "@/lib/i18n/shared";
+
+function downloadCsv(filename: string, content: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface Member {
   id: number; email: string; role: "owner" | "admin" | "member";
@@ -29,6 +38,10 @@ export default function OrgMembers({ role }: { role: "owner" | "admin" }) {
   const [results, setResults] = useState<{ email: string; status: string }[]>([]);
   const [deptName, setDeptName] = useState("");
   const [message, setMessage] = useState("");
+  const [csvBusy, setCsvBusy] = useState(false);
+  const [deptCsvResult, setDeptCsvResult] = useState("");
+  const inviteFileRef = useRef<HTMLInputElement>(null);
+  const deptFileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     const [m, d, i] = await Promise.all([
@@ -71,6 +84,23 @@ export default function OrgMembers({ role }: { role: "owner" | "admin" }) {
     if (!r.ok) return setMessage(j.error ?? "Failed.");
     setResults(j.results ?? []);
     setEmails("");
+    await load();
+  }
+
+  async function uploadCsv(kind: "invites" | "departments", file: File) {
+    if (csvBusy) return;
+    setCsvBusy(true);
+    setMessage("");
+    const r = await fetch(`/api/org/${kind}/bulk`, {
+      method: "POST",
+      headers: { "content-type": "text/csv" },
+      body: await file.text(),
+    });
+    const j = await r.json().catch(() => ({}));
+    setCsvBusy(false);
+    if (!r.ok) return setMessage(j.error ?? "Failed.");
+    if (kind === "invites") setResults(j.results ?? []);
+    else setDeptCsvResult(fmt(t.deptCsvResult, { created: j.created ?? 0, exists: j.exists ?? 0, invalid: j.invalid ?? 0 }));
     await load();
   }
 
@@ -169,6 +199,23 @@ export default function OrgMembers({ role }: { role: "owner" | "admin" }) {
             {sending ? t.inviteSending : t.inviteCta}
           </button>
         </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-hairline pt-4">
+          <span className="text-[14px] text-mute">{t.memberCsvHint}</span>
+          <button className="btn-secondary !min-h-[36px] !px-3 !py-1.5 text-[14px]"
+            onClick={() => downloadCsv("members.csv", "email,role,department\nalice@example.com,member,Engineering\nbob@example.com,member,\n")}>
+            {t.csvTemplate}
+          </button>
+          <button className="btn-secondary !min-h-[36px] !px-3 !py-1.5 text-[14px]"
+            onClick={() => inviteFileRef.current?.click()} disabled={csvBusy}>
+            {csvBusy ? t.csvUploading : t.csvUpload}
+          </button>
+          <input ref={inviteFileRef} type="file" accept=".csv,text/csv" className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void uploadCsv("invites", f);
+              e.target.value = "";
+            }} />
+        </div>
         {results.length > 0 && (
           <ul className="mt-3 flex flex-col gap-1 text-[14px]">
             {results.map((x, i) => (
@@ -219,6 +266,24 @@ export default function OrgMembers({ role }: { role: "owner" | "admin" }) {
             }}>
             {t.deptAdd}
           </button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <span className="text-[14px] text-mute">{t.deptCsvHint}</span>
+          <button className="btn-secondary !min-h-[36px] !px-3 !py-1.5 text-[14px]"
+            onClick={() => downloadCsv("departments.csv", "name\nEngineering\nSales\n")}>
+            {t.csvTemplate}
+          </button>
+          <button className="btn-secondary !min-h-[36px] !px-3 !py-1.5 text-[14px]"
+            onClick={() => deptFileRef.current?.click()} disabled={csvBusy}>
+            {csvBusy ? t.csvUploading : t.csvUpload}
+          </button>
+          <input ref={deptFileRef} type="file" accept=".csv,text/csv" className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void uploadCsv("departments", f);
+              e.target.value = "";
+            }} />
+          {deptCsvResult && <span className="text-[14px] text-accent-green">{deptCsvResult}</span>}
         </div>
         <ul className="mt-4 flex flex-col gap-2 text-[15px]">
           {depts.map((d) => (
