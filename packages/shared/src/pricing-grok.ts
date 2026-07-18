@@ -31,14 +31,18 @@ export function grokPriceFor(model: string): GrokPrice {
 
 export function computeCostGrok(
   model: string,
-  u: { prompt_tokens: number; completion_tokens: number; cached_tokens: number }
+  u: { prompt_tokens: number; completion_tokens: number; cached_tokens: number; reasoning_tokens?: number }
 ) {
   const p = grokPriceFor(model);
   const per = p.inputPerMTok / 1_000_000;
   const perOut = p.outputPerMTok / 1_000_000;
   const fresh = Math.max(0, (u.prompt_tokens || 0) - (u.cached_tokens || 0));
+  // xAI bills reasoning tokens as output but reports them OUTSIDE
+  // completion_tokens (completion_tokens_details.reasoning_tokens) — verified
+  // against real invoices in bench run-20260718.
+  const out = (u.completion_tokens || 0) + (u.reasoning_tokens || 0);
   const actualUsd =
-    fresh * per + (u.cached_tokens || 0) * per * p.cachedInputMult + (u.completion_tokens || 0) * perOut;
-  const noCacheUsd = (u.prompt_tokens || 0) * per + (u.completion_tokens || 0) * perOut;
+    fresh * per + (u.cached_tokens || 0) * per * p.cachedInputMult + out * perOut;
+  const noCacheUsd = (u.prompt_tokens || 0) * per + out * perOut;
   return { actualUsd, noCacheUsd, savedUsd: noCacheUsd - actualUsd };
 }

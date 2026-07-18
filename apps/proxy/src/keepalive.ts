@@ -1,25 +1,22 @@
 import type pg from "pg";
-import {
-  computeCost,
-  computeCostOpenAI,
-  computeCostGemini,
-  computeCostGrok,
-  decrypt,
-  openaiCacheClass,
-  type Usage,
-} from "@caching/shared";
+import { computeCost, decrypt, type Usage } from "@caching/shared";
 import { emptyUsage, mergeUsage } from "./logic/usageTap.js";
-import {
-  insertRequestLog,
-  PROVIDER_KEY_FALLBACK,
-  PROVIDER_KEY_JOINS,
-  type CostBreakdown,
-} from "./store.js";
+import { upgradeCacheControlTo1h } from "./logic/cacheControl.js";
+import { insertRequestLog, type CostBreakdown } from "./store.js";
 
+// Warming pings are ANTHROPIC-ONLY, by measurement (bench run-20260718):
+//   · Anthropic explicit caches provably refresh on read — S2 sparse landed
+//     at 33% of direct cost, pings included. Worth doing.
+//   · gpt-4o held an 88% hit rate through 6-9 min idle gaps WITHOUT pings —
+//     upstream retention is long; pings only burned budget.
+//   · pre-GPT-5.6 models keep the cache ~24h upstream; nothing to warm.
+//   · GPT-5.6+ showed 0% cross-suffix prefix hits over 3,240 calls — a ping
+//     (different suffix) cannot refresh the caller's cache there.
+//   · Gemini implicit caching produced 0 hits from pings.
+//   · Grok pings are unproven and burn separately-billed reasoning tokens.
+//
 // Economics (PRD): a cache kept warm by cheap pings beats a full rewrite as
 // long as the prefix is reused within ~62.5 minutes of the last real request.
-// Provider cache TTLs: Anthropic 5m fixed; OpenAI/Gemini ~5-10m inactivity
-// (best-effort) — the same 4-minute cadence keeps all three warm.
 export const PING_AFTER_MS = 4 * 60 * 1000;
 export const GIVE_UP_AFTER_MS = 62.5 * 60 * 1000;
 // Anthropic 1h TTL: reads refresh the full hour, so one ping near the end of
@@ -27,17 +24,21 @@ export const GIVE_UP_AFTER_MS = 62.5 * 60 * 1000;
 // 0.1x ping = 20 pings ≈ 20 hours of idle coverage.
 export const PING_AFTER_1H_MS = 55 * 60 * 1000;
 export const GIVE_UP_1H_MS = 20 * 60 * 60 * 1000;
-// OpenAI GPT-5.6+ hold a ~30m server-side window (prompt_cache_options era):
-// one ping per window, same ~20-window coverage as the 1h math.
-export const PING_AFTER_30M_MS = 25 * 60 * 1000;
-export const GIVE_UP_30M_MS = 10 * 60 * 60 * 1000;
+// A warm hold of ≥30 min on a 5m-TTL key is cheaper as ONE 1h-TTL cache
+// write (2x) than as 0.1x pings every 4 minutes (break-even at ~30 min:
+// 7.5 pings × 0.1x ≈ the 0.75x extra premium of a 1h write) — run-20260718
+// S5 measured the ping route at +23% vs direct on a 45-min hold.
+// Measured (prod e2e 2026-07-18): a 1h marker on a still-warm 5m entry only
+// READS it — Anthropic does not upgrade an entry's TTL on read. The upgrade
+// write must therefore wait until the 5m entry has EXPIRED, so the cold
+// write lands as a fresh 1h entry (cache gap ≤ one sweep interval).
+export const HOLD_UPGRADE_MIN_MS = 30 * 60 * 1000;
+export const TTL_5M_MS = 5 * 60 * 1000;
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 export interface KeepaliveDeps {
   pool: pg.Pool;
   upstreamUrl: string; // Anthropic
-  openaiUpstreamUrl?: string;
-  geminiUpstreamUrl?: string;
-  grokUpstreamUrl?: string;
   encryptionKey: string;
   fetchImpl?: typeof fetch;
   now?: () => number;
@@ -45,18 +46,15 @@ export interface KeepaliveDeps {
 
 interface Candidate {
   api_key_id: number;
-  provider: "anthropic" | "openai" | "gemini" | "grok";
   model: string;
   encrypted_prefix: string;
   anthropic_key_encrypted: string | null;
-  openai_key_encrypted: string | null;
-  gemini_key_encrypted: string | null;
-  grok_key_encrypted: string | null;
   keepalive_budget_usd_daily: string;
   anthropic_cache_ttl: "5m" | "1h";
   keepalive_hold_until: Date | null;
   last_request_at: Date;
   last_ping_at: Date | null;
+  last_1h_write_at: Date | null;
   pings_today: number;
   spend_today_usd: string;
   spend_day: string;
@@ -96,102 +94,8 @@ async function pingAnthropic(
   return { status: res.status, usage, cost: computeCost(prefix.model, usage) };
 }
 
-async function pingOpenAI(
-  deps: KeepaliveDeps, prefix: any, apiKey: string, doFetch: typeof fetch,
-  baseUrl?: string, costFn: typeof computeCostOpenAI = computeCostOpenAI
-): Promise<PingResult> {
-  const body: any = {
-    model: prefix.model,
-    max_completion_tokens: 1,
-    messages: [...(prefix.messages ?? []), { role: "user", content: "ping" }],
-  };
-  if (prefix.tools !== undefined) body.tools = prefix.tools;
-  if (prefix.prompt_cache_key !== undefined) body.prompt_cache_key = prefix.prompt_cache_key;
-
-  const res = await doFetch(
-    new URL("/v1/chat/completions", baseUrl ?? deps.openaiUpstreamUrl ?? "https://api.openai.com"),
-    {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30_000),
-    }
-  );
-  let prompt = 0, completion = 0, cached = 0;
-  try {
-    const u = (await res.json())?.usage;
-    prompt = u?.prompt_tokens ?? 0;
-    completion = u?.completion_tokens ?? 0;
-    cached = u?.prompt_tokens_details?.cached_tokens ?? 0;
-  } catch { /* ignore */ }
-  const usage: Usage = {
-    input_tokens: prompt - cached,
-    output_tokens: completion,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: cached,
-  };
-  return {
-    status: res.status,
-    usage,
-    cost: costFn(prefix.model, {
-      prompt_tokens: prompt, completion_tokens: completion, cached_tokens: cached,
-    }),
-  };
-}
-
-async function pingGemini(
-  deps: KeepaliveDeps, prefix: any, apiKey: string, doFetch: typeof fetch
-): Promise<PingResult> {
-  const body: any = {
-    contents: [{ role: "user", parts: [{ text: "ping" }] }],
-    generationConfig: { maxOutputTokens: 1 },
-  };
-  if (prefix.systemInstruction !== undefined) body.systemInstruction = prefix.systemInstruction;
-  if (prefix.tools !== undefined) body.tools = prefix.tools;
-
-  const res = await doFetch(
-    new URL(
-      `/v1beta/models/${prefix.model}:generateContent`,
-      deps.geminiUpstreamUrl ?? "https://generativelanguage.googleapis.com"
-    ),
-    {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30_000),
-    }
-  );
-  let prompt = 0, completion = 0, cached = 0;
-  try {
-    const m = (await res.json())?.usageMetadata;
-    prompt = m?.promptTokenCount ?? 0;
-    completion = m?.candidatesTokenCount ?? 0;
-    cached = m?.cachedContentTokenCount ?? 0;
-  } catch { /* ignore */ }
-  const usage: Usage = {
-    input_tokens: prompt - cached,
-    output_tokens: completion,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: cached,
-  };
-  return {
-    status: res.status,
-    usage,
-    cost: computeCostGemini(prefix.model, {
-      promptTokenCount: prompt, candidatesTokenCount: completion, cachedContentTokenCount: cached,
-    }),
-  };
-}
-
-const PROVIDER_KEY_COLUMN: Record<string, keyof Candidate> = {
-  anthropic: "anthropic_key_encrypted",
-  openai: "openai_key_encrypted",
-  gemini: "gemini_key_encrypted",
-  grok: "grok_key_encrypted",
-};
-
 /**
- * One sweep of the keep-alive engine across all three providers.
+ * One sweep of the keep-alive engine (Anthropic only — see header).
  * Returns the number of pings sent. Runs on an interval in the proxy
  * process; directly callable from tests with a fake clock and upstreams.
  */
@@ -201,24 +105,25 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
   const now = deps.now ? deps.now() : Date.now();
 
   const { rows } = await pool.query<Candidate>(
-    `SELECT ks.api_key_id, ks.provider, ks.model, ks.encrypted_prefix, ks.last_request_at, ks.last_ping_at,
-            ks.pings_today, ks.spend_today_usd,
+    `SELECT ks.api_key_id, ks.model, ks.encrypted_prefix, ks.last_request_at, ks.last_ping_at,
+            ks.last_1h_write_at, ks.pings_today, ks.spend_today_usd,
             to_char(ks.spend_day, 'YYYY-MM-DD') AS spend_day,
-            ${PROVIDER_KEY_FALLBACK},
+            COALESCE(k.anthropic_key_encrypted, ua.key_encrypted) AS anthropic_key_encrypted,
             k.keepalive_budget_usd_daily, k.anthropic_cache_ttl,
             k.keepalive_hold_until
        FROM keepalive_state ks
        JOIN api_keys k ON k.id = ks.api_key_id
-       ${PROVIDER_KEY_JOINS}
+       LEFT JOIN user_provider_keys ua ON ua.user_id = k.user_id AND ua.provider = 'anthropic'
       WHERE k.keepalive_enabled = true
         AND k.revoked_at IS NULL
+        AND ks.provider = 'anthropic'
         AND ks.encrypted_prefix IS NOT NULL
         AND ks.last_request_at IS NOT NULL`
   );
 
   // The daily budget belongs to the KEY (that's what the console and the
-  // budget-alert email promise) — sum today's spend across the key's provider
-  // rows so two providers can't each burn the full budget.
+  // budget-alert email promise) — sum today's spend across the key's rows so
+  // concurrent state rows can't each burn the full budget.
   const today = new Date(now).toISOString().slice(0, 10);
   const keySpend = new Map<number, number>();
   for (const row of rows) {
@@ -228,50 +133,70 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
 
   let pinged = 0;
   for (const row of rows) {
-    // OpenAI is fully model-aware — no user setting involved: pre-GPT-5.6
-    // models keep the cache ~24h upstream (pings would only burn budget —
-    // skip), GPT-5.6+ hold a ~30m window (one ping per window), non-extended
-    // models (gpt-4o…) are in-memory ~5-10m (standard cadence). Rows without
-    // a saved model (legacy) are skipped — never spend on unknowns. Rare ZDR
-    // orgs (short retention everywhere) lose OpenAI warming; documented.
-    const openaiClass =
-      row.provider === "openai" ? (row.model ? openaiCacheClass(row.model) : "24h") : null;
-    if (openaiClass === "24h") continue;
-
-    // Anthropic 1h TTL needs one ping per hour, not one every 4 minutes.
-    const longTtl = row.provider === "anthropic" && row.anthropic_cache_ttl === "1h";
-    const pingAfter = longTtl ? PING_AFTER_1H_MS : openaiClass === "30m" ? PING_AFTER_30M_MS : PING_AFTER_MS;
-    const giveUp = longTtl ? GIVE_UP_1H_MS : openaiClass === "30m" ? GIVE_UP_30M_MS : GIVE_UP_AFTER_MS;
-
     const lastReq = new Date(row.last_request_at).getTime();
     const sinceReq = now - lastReq;
-    if (sinceReq < pingAfter) continue;
-    // an active warm hold overrides the give-up window (budget still applies)
-    const held = row.keepalive_hold_until && new Date(row.keepalive_hold_until).getTime() > now;
-    if (sinceReq >= giveUp && !held) continue;
+    const holdUntil = row.keepalive_hold_until ? new Date(row.keepalive_hold_until).getTime() : 0;
+    const held = holdUntil > now;
 
+    const longTtl = row.anthropic_cache_ttl === "1h";
+    const last1h = row.last_1h_write_at ? new Date(row.last_1h_write_at).getTime() : 0;
+    // a 1h cache entry we wrote (or refreshed) less than an hour ago is still
+    // alive — one ping per 55m window keeps it warm regardless of key TTL
+    const oneHourAlive = last1h > 0 && now - last1h < ONE_HOUR_MS;
+    // long hold on a 5m key: ONE 1h write instead of a 4-minute ping cadence.
+    // The write only lands as a 1h entry once the old 5m entry is cold (see
+    // header) — until then, stay silent and let it expire.
     const lastPing = row.last_ping_at ? new Date(row.last_ping_at).getTime() : 0;
-    if (now - lastPing < pingAfter) continue; // cache still warm from last ping
+    const cold5m = now - Math.max(lastReq, lastPing) >= TTL_5M_MS;
+    const wantUpgrade =
+      held && !longTtl && !oneHourAlive && cold5m && holdUntil - now >= HOLD_UPGRADE_MIN_MS;
+    const holdWaitingFor5mExpiry =
+      held && !longTtl && !oneHourAlive && !cold5m && holdUntil - now >= HOLD_UPGRADE_MIN_MS;
 
-    // daily budget guard: key-level, all providers combined, resets daily (UTC)
+    const pingAfter = longTtl || oneHourAlive ? PING_AFTER_1H_MS : PING_AFTER_MS;
+    const giveUp = longTtl ? GIVE_UP_1H_MS : GIVE_UP_AFTER_MS;
+
+    if (holdWaitingFor5mExpiry) continue; // no 4-min cadence — the upgrade is imminent
+    if (!wantUpgrade) {
+      if (sinceReq < pingAfter) continue;
+      // an active warm hold overrides the give-up window (budget still applies)
+      if (sinceReq >= giveUp && !held) continue;
+      if (now - lastPing < pingAfter) continue; // cache still warm from last ping
+    }
+
+    // daily budget guard: key-level, resets daily (UTC)
     const budget = Number(row.keepalive_budget_usd_daily);
     if ((keySpend.get(row.api_key_id) ?? 0) >= budget) continue;
 
-    const encKey = row[PROVIDER_KEY_COLUMN[row.provider]] as string | null;
-    if (!encKey) continue;
+    if (!row.anthropic_key_encrypted) continue;
 
-    // atomic claim: only one sweep/replica may ping this (key, provider)
-    // window, and the key-level budget is re-checked against the live DB so
-    // concurrent replicas can't each admit pings off a stale snapshot
+    // atomic claim: only one sweep/replica may ping this key's window, and
+    // the key-level budget is re-checked against the live DB so concurrent
+    // replicas can't each admit pings off a stale snapshot. An upgrade ping
+    // claims on last_1h_write_at (its cadence column) instead of last_ping_at.
+    // 1h-marker pings: the hold upgrade itself, and refreshes of a still-alive
+    // 1h entry on a 5m key. Keys already set to the 1h TTL are left untouched
+    // (their saved prefix carries 1h markers from injection time).
+    const use1h = !longTtl && (wantUpgrade || oneHourAlive);
     const claim = await pool.query(
-      `UPDATE keepalive_state
-          SET last_ping_at = to_timestamp($3 / 1000.0)
-        WHERE api_key_id = $1 AND provider = $2
-          AND (last_ping_at IS NULL OR last_ping_at <= to_timestamp($4 / 1000.0))
-          AND (SELECT COALESCE(sum(CASE WHEN ks2.spend_day = $5::date
-                                        THEN ks2.spend_today_usd ELSE 0 END), 0)
-                 FROM keepalive_state ks2 WHERE ks2.api_key_id = $1) < $6`,
-      [row.api_key_id, row.provider, now, now - pingAfter, today, budget]
+      wantUpgrade
+        ? `UPDATE keepalive_state
+              SET last_ping_at = to_timestamp($2 / 1000.0),
+                  last_1h_write_at = to_timestamp($2 / 1000.0)
+            WHERE api_key_id = $1 AND provider = 'anthropic'
+              AND (last_1h_write_at IS NULL OR last_1h_write_at <= to_timestamp($3 / 1000.0))
+              AND (SELECT COALESCE(sum(CASE WHEN ks2.spend_day = $4::date
+                                            THEN ks2.spend_today_usd ELSE 0 END), 0)
+                     FROM keepalive_state ks2 WHERE ks2.api_key_id = $1) < $5`
+        : `UPDATE keepalive_state
+              SET last_ping_at = to_timestamp($2 / 1000.0)` +
+              (use1h ? `, last_1h_write_at = to_timestamp($2 / 1000.0)` : ``) + `
+            WHERE api_key_id = $1 AND provider = 'anthropic'
+              AND (last_ping_at IS NULL OR last_ping_at <= to_timestamp($3 / 1000.0))
+              AND (SELECT COALESCE(sum(CASE WHEN ks2.spend_day = $4::date
+                                            THEN ks2.spend_today_usd ELSE 0 END), 0)
+                     FROM keepalive_state ks2 WHERE ks2.api_key_id = $1) < $5`,
+      [row.api_key_id, now, now - (wantUpgrade ? PING_AFTER_1H_MS : pingAfter), today, budget]
     );
     if (!claim.rowCount) continue;
 
@@ -279,41 +204,36 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
     let providerKey: string;
     try {
       prefix = JSON.parse(decrypt(row.encrypted_prefix, encryptionKey));
-      providerKey = decrypt(encKey, encryptionKey);
+      providerKey = decrypt(row.anthropic_key_encrypted, encryptionKey);
     } catch {
-      console.error(`keepalive: decrypt failed for key ${row.api_key_id}/${row.provider}`);
+      console.error(`keepalive: decrypt failed for key ${row.api_key_id}/anthropic`);
       continue;
     }
+    // upgrade/refresh pings carry 1h markers so the write (or refresh) lands
+    // on the 1h TTL; plain 5m-cadence pings replay the prefix untouched
+    if (use1h && !longTtl) prefix = upgradeCacheControlTo1h(prefix);
 
     let result: PingResult;
     try {
-      result =
-        row.provider === "openai"
-          ? await pingOpenAI(deps, prefix, providerKey, doFetch)
-          : row.provider === "grok"
-            ? await pingOpenAI(deps, prefix, providerKey, doFetch,
-                deps.grokUpstreamUrl ?? "https://api.x.ai", computeCostGrok)
-            : row.provider === "gemini"
-              ? await pingGemini(deps, prefix, providerKey, doFetch)
-              : await pingAnthropic(deps, prefix, providerKey, doFetch);
+      result = await pingAnthropic(deps, prefix, providerKey, doFetch);
     } catch (e) {
-      console.error(`keepalive ping failed for ${row.api_key_id}/${row.provider}:`, (e as Error).message);
+      console.error(`keepalive ping failed for ${row.api_key_id}/anthropic:`, (e as Error).message);
       continue;
     }
 
     await pool.query(
       `UPDATE keepalive_state
-          SET last_ping_at = to_timestamp($3 / 1000.0),
-              pings_today = CASE WHEN spend_day = $4::date THEN pings_today + 1 ELSE 1 END,
-              spend_today_usd = CASE WHEN spend_day = $4::date THEN spend_today_usd + $5 ELSE $5 END,
-              spend_day = $4::date
-        WHERE api_key_id = $1 AND provider = $2`,
-      [row.api_key_id, row.provider, now, today, result.cost.actualUsd]
+          SET last_ping_at = to_timestamp($2 / 1000.0),
+              pings_today = CASE WHEN spend_day = $3::date THEN pings_today + 1 ELSE 1 END,
+              spend_today_usd = CASE WHEN spend_day = $3::date THEN spend_today_usd + $4 ELSE $4 END,
+              spend_day = $3::date
+        WHERE api_key_id = $1 AND provider = 'anthropic'`,
+      [row.api_key_id, now, today, result.cost.actualUsd]
     );
     keySpend.set(row.api_key_id, (keySpend.get(row.api_key_id) ?? 0) + result.cost.actualUsd);
     await insertRequestLog(pool, {
       apiKeyId: row.api_key_id,
-      provider: row.provider,
+      provider: "anthropic",
       model: prefix.model,
       status: result.status,
       latencyMs: 0,

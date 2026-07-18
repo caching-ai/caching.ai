@@ -1,6 +1,6 @@
 // Single version authority: /healthz, the boot banner and the
 // caching_build_info metric all read this. Bump together with package.json.
-export const PROXY_VERSION = "0.9.0";
+export const PROXY_VERSION = "0.10.0";
 
 export interface ProxyConfig {
   upstreamUrl: string;

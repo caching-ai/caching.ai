@@ -61,9 +61,6 @@ for (const sig of ["SIGTERM", "SIGINT"] as const) {
 startKeepaliveLoop({
   pool,
   upstreamUrl: cfg.upstreamUrl,
-  openaiUpstreamUrl: process.env.OPENAI_UPSTREAM_URL,
-  geminiUpstreamUrl: process.env.GEMINI_UPSTREAM_URL,
-  grokUpstreamUrl: process.env.GROK_UPSTREAM_URL,
   encryptionKey: cfg.encryptionKey,
 });
 startBillingLoop(pool);

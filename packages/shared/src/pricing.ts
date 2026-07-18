@@ -53,6 +53,10 @@ export interface Usage {
   output_tokens: number;
   cache_creation_input_tokens: number;
   cache_read_input_tokens: number;
+  /** per-TTL write breakdown (Anthropic usage.cache_creation) — when present,
+   * 1h writes are priced at their real 2x premium instead of the 5m 1.25x */
+  cache_creation_5m_input_tokens?: number;
+  cache_creation_1h_input_tokens?: number;
 }
 
 export interface CostBreakdown {
@@ -66,8 +70,9 @@ export interface CostBreakdown {
 
 /**
  * Cost of one request from its usage block.
- * Assumes 5-minute-TTL cache writes (Anthropic default) since the usage
- * block does not distinguish TTLs.
+ * When the usage carries Anthropic's per-TTL cache_creation breakdown, 1h
+ * writes are billed at their real 2x premium; otherwise all writes are
+ * assumed 5m (1.25x) as before.
  */
 export function computeCost(model: string, u: Usage): CostBreakdown {
   const p = priceFor(model);
@@ -77,9 +82,15 @@ export function computeCost(model: string, u: Usage): CostBreakdown {
   const outTok = u.output_tokens || 0;
   const cw = u.cache_creation_input_tokens || 0;
   const cr = u.cache_read_input_tokens || 0;
+  const cw1h = u.cache_creation_1h_input_tokens || 0;
+  const cw5m = u.cache_creation_5m_input_tokens ?? Math.max(0, cw - cw1h);
 
   const actualUsd =
-    inTok * per + cw * per * CACHE_WRITE_5M_MULT + cr * per * CACHE_READ_MULT + outTok * perOut;
+    inTok * per +
+    cw5m * per * CACHE_WRITE_5M_MULT +
+    cw1h * per * CACHE_WRITE_1H_MULT +
+    cr * per * CACHE_READ_MULT +
+    outTok * perOut;
   const noCacheUsd = (inTok + cw + cr) * per + outTok * perOut;
   return { actualUsd, noCacheUsd, savedUsd: noCacheUsd - actualUsd };
 }

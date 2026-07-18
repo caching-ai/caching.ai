@@ -22,11 +22,14 @@ export function startMockOpenAI(port: number): Promise<{ server: ServerType; sta
     if (state.forceStatus)
       return c.json({ error: { message: "forced", type: "invalid_request_error" } }, state.forceStatus as any);
 
+    // reasoning_tokens mirrors xAI's wire shape: OUTSIDE completion_tokens.
+    // OpenAI-billed rows must ignore it; grok-billed rows must add it.
     const usage = {
       prompt_tokens: 3000,
       completion_tokens: 40,
       total_tokens: 3040,
       prompt_tokens_details: { cached_tokens: 2048 },
+      completion_tokens_details: { reasoning_tokens: 500 },
     };
 
     if (body.stream) {

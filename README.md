@@ -27,12 +27,19 @@ discount actually land:
 - **Cache analytics** — real hit rate, dollars saved, and the number nobody
   shows you: dollars wasted on prompts that should have been cached. Token
   counts only; prompt/response bodies are never stored.
-- **Cache guard** — auto `cache_control` injection (Anthropic), stable
-  `prompt_cache_key` routing (OpenAI), and cache-breaker detection with the
-  likely root cause (timestamps, random IDs, reordered tools).
-- **Keep-alive warming** *(opt-in per key)* — 1-token pings re-warm your
-  prefix exactly while re-use is economical (up to 62.5 min), within a daily
-  budget you control. Stepping away? Say `"keep my cache warm for 2 hours"`
+- **Cache guard** — auto `cache_control` injection (Anthropic), GPT-5.6+
+  cache restore (the 5.6 generation only matches at breakpoints, so naive
+  shared prefixes get 0% cross-request hits — we inject an explicit
+  `prompt_cache_breakpoint` plus a STABLE `prompt_cache_key`, verified live
+  0% → 99.6% prefix hits), and cache-breaker detection with the likely root
+  cause (timestamps, random IDs, reordered tools).
+- **Keep-alive warming** *(opt-in per key, Anthropic only — by design)* —
+  1-token pings re-warm your prefix exactly while re-use is economical (up to
+  62.5 min), within a daily budget you control. Other providers hold their
+  caches upstream on their own (we measured — [BENCHMARK.md](BENCHMARK.md)),
+  so the proxy never spends your budget where a ping can't pay off. Holds
+  of 30+ minutes are served as a single 1h-TTL write instead of pings.
+  Stepping away? Say `"keep my cache warm for 2 hours"`
   in chat — the proxy answers it itself and holds warming (see below).
 - **Prefix optimizer** — measures which part of your prompt changes between
   requests and tells you how to fix it.

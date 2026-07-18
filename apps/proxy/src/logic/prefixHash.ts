@@ -75,42 +75,8 @@ export function detectBreaker(prev: BlockHash[] | null | undefined, cur: BlockHa
   return false;
 }
 
-/**
- * OpenAI keep-alive prefix (chat/completions only): tools + the leading run
- * of system/developer messages. Replaying it re-touches OpenAI's automatic
- * prefix cache before it expires.
- */
-export function extractKeepalivePrefixOpenAI(body: any): {
-  model: string;
-  tools?: any;
-  messages: any[];
-} | null {
-  if (!body?.model || !Array.isArray(body?.messages)) return null;
-  const leading: any[] = [];
-  for (const m of body.messages) {
-    if (m?.role === "system" || m?.role === "developer") leading.push(m);
-    else break;
-  }
-  if (leading.length === 0 && body.tools === undefined) return null;
-  const out: any = { model: body.model, messages: leading };
-  if (body.tools !== undefined) out.tools = body.tools;
-  if (body.prompt_cache_key !== undefined) out.prompt_cache_key = body.prompt_cache_key;
-  return out;
-}
-
-/** Gemini keep-alive prefix: systemInstruction + tools (implicit cache). */
-export function extractKeepalivePrefixGemini(body: any, model: string): {
-  model: string;
-  systemInstruction?: any;
-  tools?: any;
-} | null {
-  const sys = body?.systemInstruction ?? body?.system_instruction;
-  if (sys === undefined && body?.tools === undefined) return null;
-  const out: any = { model };
-  if (sys !== undefined) out.systemInstruction = sys;
-  if (body.tools !== undefined) out.tools = body.tools;
-  return out;
-}
+// (OpenAI/Gemini keep-alive prefix extraction removed: warming pings are
+// Anthropic-only since bench run-20260718 — see keepalive.ts header.)
 
 /**
  * The keep-alive prefix: model + tools + system + messages up to (and

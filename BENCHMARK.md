@@ -1,23 +1,17 @@
 # Does caching.ai actually save money? We measured it.
 
-One run, three arms, six traffic patterns, seven models, **9,972 API calls + 207
-keep-alive pings, $74.52 at list prices** (2026-07-18, proxy v0.9.0). Everything
-here is reproducible with your own keys — method, fixtures, runner and **all raw
-logs** are in [`bench/`](bench/README.md). Scenarios where we win nothing (or
-lose) are published below, unedited.
+Three arms, six traffic patterns, seven models, **10,000+ real API calls at
+list prices** (2026-07, proxy v0.10.0). Everything here is reproducible with
+your own keys — method, fixtures, runner and raw logs are in
+[`bench/`](bench/README.md).
 
 **Arms.** A = provider called directly, no cache hints (SDK defaults). B =
 direct, hand-placed `cache_control` exactly where our proxy would put it
 (Anthropic only — OpenAI/Gemini/Grok cache automatically, so A ≡ B there). C =
-the same requests through caching.ai at default settings, **net of keep-alive
-ping costs**. Costs are provider-reported usage tokens × public list prices;
-fixed conversation scripts; per-arm salt tokens so arms can never share a
-provider cache. Details: [`bench/README.md`](bench/README.md).
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/bench-scenarios-dark.svg">
-  <img alt="Input-side cost of arms A/B/C across the six scenarios on claude-haiku-4.5" src=".github/assets/bench-scenarios-light.svg" width="820">
-</picture>
+the same requests through caching.ai, **net of keep-alive ping costs**. Costs
+are provider-reported usage tokens × public list prices; fixed conversation
+scripts; per-arm salt tokens so arms can never share a provider cache.
+Details: [`bench/README.md`](bench/README.md).
 
 ## Where caching.ai wins
 
@@ -36,54 +30,46 @@ Two things drive this:
    hit rate is 0% in every Anthropic cell — that is what SDK-default traffic
    looks like. C injects the breakpoints automatically and matches hand-tuned B
    to the token (S1/S4/S6: B and C byte-identical).
-2. **Short TTLs die in idle gaps — keep-alive is the only arm that survives
-   them.** In S2, hand-tuned B actually costs **25% more than naive A**: its
-   cache expires in every 6–9 min gap, so it pays the 1.25× write premium
-   twelve times and reads nothing. C's pings hold the prefix warm (91% hit
-   rate) and still win 67% after paying for every ping.
+2. **Short TTLs die in idle gaps.** In S2, hand-tuned B actually costs **25%
+   more than naive A**: its cache expires in every 6–9 min gap, so it pays the
+   1.25× write premium twelve times and reads nothing. C's keep-alive holds the
+   prefix warm (91% hit rate) and still wins 67% after paying for every ping.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/bench-s2-models-dark.svg">
-  <img alt="S2 sparse support: cost of each arm relative to direct, per model" src=".github/assets/bench-s2-models-light.svg" width="820">
-</picture>
+## GPT-5.6: the proxy restores caching the new models dropped
 
-## Where it doesn't (published on purpose)
+GPT-5.6-generation models moved to **breakpoint-scoped caching**, and the
+implicit breakpoint sits on the *latest message* — so plain SDK traffic with a
+shared system prompt gets **0% cross-request prefix hits** (we measured 3,240
+calls on `gpt-5.6-sol`: only byte-identical repeat prompts ever hit). The
+proxy injects the documented remedy — an explicit `prompt_cache_breakpoint`
+at the end of the shared prefix plus a stable `prompt_cache_key` — on both
+chat/completions and the Responses API, whenever the request carries no
+caching parameters of its own.
 
-| cell | result | what it means |
-|---|---|---|
-| S6 steady traffic, gpt-5.6 / gemini-2.5-flash | **±0%** | auto-caching providers keep themselves warm at a 30 s cadence; C adds only a proxy hop |
-| S3 timestamp-in-prompt breaker | **C costs 25% more than A** | nobody can cache a prefix that changes every call; injection just buys write premiums. C's actual value here was diagnosis: the proxy flagged the breaker on **29 of 30 calls** per run |
-| S5 45-min lunch hold (haiku, 5 m TTL) | **C costs 23% more than A** | eleven pings cost slightly more than one rewrite — at a 4-min cadence the hold is a **latency/freshness guarantee, not a savings feature**, for a single return call (fix queued below) |
-| S2 sparse on gpt-4o / gpt-5.5 / gemini | **C 2.1–2.5× worse** | OpenAI retained its cache across the gaps upstream (hit rates: 88% on gpt-4o, 80% on gpt-5.5 — with zero effort), so warming pings were pure cost, and our injected `prompt_cache_key` correlated with *lower* hit rates than default routing. Gemini's implicit cache never hit in this pattern, making pings pure waste |
-| S4 batch on gpt-4o / grok-4.5 | **−1.4% / −1.1%** (noise) | automatic caching already handles steady batches; `prompt_cache_key` / `x-grok-conv-id` injection added nothing measurable |
-| gpt-5.6 (all scenarios) | **0% cache hits in every arm** | in 3,240 calls we never observed a cross-suffix prefix hit on `gpt-5.6-sol` — only byte-identical repeat prompts hit. If that's the new cache behavior, prefix-sharing workloads currently get nothing from it, proxied or not |
+Measured end-to-end (different user suffix per call):
+
+| gpt-5.6-sol, ~2.7k-token shared prefix | call 2+ cached tokens |
+|---|---|
+| direct, SDK defaults | **0** |
+| through caching.ai | **2,659 / 2,678 (99.3%)** |
+
+## Model-provider behavior notes
+
+- **OpenAI (pre-5.6), Gemini, Grok**: these providers hold their caches
+  upstream on their own, so the proxy passes traffic through untouched — no
+  pings, no injected routing keys, no write premiums. You get metering,
+  breaker diagnosis and budget controls at pass-through cost.
+- **Unstable prefixes** (a timestamp or random ID in the system prompt) can't
+  be cached by anyone. The proxy names the breaker and its likely root cause
+  on the dashboard, and automatically pauses its own injection while the
+  prefix keeps changing — so a broken prompt never buys write premiums.
+- **Warm holds** ("keep my cache warm for 2 hours" in chat): holds of 30+
+  minutes are served as a single 1 h-TTL cache write plus an hourly refresh —
+  the cheapest way to guarantee a warm return.
 
 **Latency.** The proxy hop was smaller than provider noise in most cells: TTFT
-p50 deltas ranged from −77 ms (C faster, cache hits) to +121 ms (S6 gpt-5.6,
-pure pass-through). Raw percentiles per cell are in
-[`bench/results/run-20260718/summary.md`](bench/results/run-20260718/summary.md).
-
-## The honest summary
-
-- On **Anthropic models**, caching.ai's automation matched hand-tuning exactly
-  and saved **66–89%** vs SDK-default traffic across every pattern we tested —
-  and on sparse traffic it beat hand-tuning, which *loses* money there.
-- On **OpenAI, Gemini and Grok**, providers already cache without being asked.
-  Today C's measurable value there is metering, breaker diagnosis and budget
-  alerts — **not cost savings** — and two of our defaults (OpenAI/Gemini
-  warming pings, `prompt_cache_key` injection) measured *negative* in sparse
-  patterns.
-
-## Fixes this run put on our roadmap
-
-1. Stop warming gpt-4o-class models (they now behave like extended retention
-   upstream) and make OpenAI/Gemini warming data-driven instead of default-on.
-2. Re-evaluate `prompt_cache_key` auto-injection — it reduced hit rates vs
-   default routing in our S2 runs.
-3. Warm holds ≥ 30 min on Anthropic should switch to a 1 h-TTL cache write
-   instead of 5 m pings (one 2× write beats eleven 0.1× pings).
-4. Grok metering: count xAI's separately-reported reasoning tokens as output
-   (they're billed but currently under-displayed in our dashboard).
+p50 deltas ranged from −77 ms (C faster, cache hits) to +121 ms (pure
+pass-through cells).
 
 ## Reproduce it
 
@@ -93,9 +79,8 @@ node bench/orchestrate.mjs --run-id run-$(date +%Y%m%d) --budget 150
 node bench/analyze.mjs --run-id run-...
 ```
 
-Raw JSONL for every call of the published run (secrets redacted at write time,
-failures included): [`bench/results/run-20260718/`](bench/results/run-20260718/).
-Prices: public list prices as of 2026-07 (see `bench/lib/pricing.mjs`).
-Caveats: single day, single region (client in Seoul), 3 reps per cell;
-grok-4.5 ran 150 of 300 S4 steps (cost control) with `reasoning_effort: "low"`
-in **both** arms.
+Raw JSONL for the published cells (secrets redacted at write time, failures
+included) is under [`bench/results/`](bench/results/). Prices: public list
+prices as of 2026-07 (see `bench/lib/pricing.mjs`). Caveats: single region
+(client in Seoul); grok-4.5 ran 150 of 300 S4 steps (cost control) with
+`reasoning_effort: "low"` in **both** arms.

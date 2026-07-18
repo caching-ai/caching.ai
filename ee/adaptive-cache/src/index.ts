@@ -108,8 +108,8 @@ export async function recommendForKey(
   for (let i = 1; i < anthropicTs.length; i++) gaps.push(anthropicTs[i] - anthropicTs[i - 1]);
   if (gaps.length) out.anthropic = simulateAnthropicTtl(gaps, keepalive);
 
-  // OpenAI retention is handled automatically per model by the keep-alive
-  // sweep (openaiCacheClass) — nothing to recommend anymore.
+  // OpenAI needs no recommendation: the provider holds the cache upstream
+  // and warming pings are Anthropic-only (measured, bench run-20260718).
 
   return out;
 }

@@ -33,18 +33,6 @@ export function wastePerInputTokenUsd(provider: Provider, model: string): number
   return (p.inputPerMTok / 1_000_000) * (1 - CACHE_READ_MULT);
 }
 
-/**
- * How OpenAI retains a prompt cache for a given model (per the official
- * prompt-caching guide, 2026-07):
- *   '24h'    gpt-4.1*, gpt-5, gpt-5.1–5.5*: extended retention is the
- *            upstream DEFAULT for non-ZDR orgs — warming pings only burn budget
- *   '30m'    gpt-5.6+ / gpt-6+: prompt_cache_options era, fixed ~30m window —
- *            one ping per window keeps it warm
- *   'memory' everything else (gpt-4o, o-series, unknown): in-memory ~5-10m
- */
-export function openaiCacheClass(model: string): "24h" | "30m" | "memory" {
-  const m = model.toLowerCase();
-  if (/^gpt-(4\.1|5(\.[1-5])?)($|-)/.test(m)) return "24h";
-  if (/^gpt-(5\.(6|7|8|9)|[6-9])/.test(m)) return "30m";
-  return "memory";
-}
+// (openaiCacheClass removed: warming pings are Anthropic-only since bench
+// run-20260718 measured OpenAI retention outlasting sparse gaps on every
+// class — see apps/proxy/src/keepalive.ts header for the evidence.)

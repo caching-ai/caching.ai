@@ -21,6 +21,7 @@ let proxyUrl: string;
 let ck: string;
 let userId: number;
 let openaiState: Awaited<ReturnType<typeof startMockOpenAI>>["state"];
+let anthroState: Awaited<ReturnType<typeof startMock>>["state"];
 let geminiState: Awaited<ReturnType<typeof startMockGemini>>["state"];
 let resend: Awaited<ReturnType<typeof startMockResend>>;
 
@@ -56,6 +57,7 @@ before(async () => {
   resend = await startMockResend(45884);
   openaiState = openai.state;
   geminiState = gemini.state;
+  anthroState = anthropic.state;
   servers.push(anthropic.server, openai.server, gemini.server, resend.server);
 
   const app = buildApp({
@@ -231,61 +233,65 @@ test("isoWeekKey stable across year boundaries", () => {
 });
 
 // ---------- full-pipeline additions: openai/gemini keep-alive + cache-key injection ----------
-import { keepaliveSweep, PING_AFTER_MS } from "../src/keepalive.js";
+import { keepaliveSweep, PING_AFTER_MS, TTL_5M_MS } from "../src/keepalive.js";
 
 const BIGSYS = "You are a precise assistant. ".repeat(200); // ~1.7k estimated tokens
 
-test("openai: prompt_cache_key injected when absent, preserved when present", async () => {
+test("openai: pre-5.6 gets NO injection; gpt-5.6+ gets explicit breakpoint + STABLE prompt_cache_key", async () => {
+  // pre-5.6: run-20260718 measured our injected key LOWERING hit rates — nothing is injected
   await fetch(`${proxyUrl}/v1/chat/completions`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${ck}` },
-    body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "system", content: "s" }, { role: "user", content: "q" }] }),
+    body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "system", content: BIGSYS }, { role: "user", content: "q" }] }),
   });
-  const injected = openaiState.bodies.at(-1);
-  assert.match(injected.prompt_cache_key, /^cai-[0-9a-f]{16}$/);
+  assert.equal(openaiState.bodies.at(-1).prompt_cache_key, undefined, "pre-5.6 must stay untouched");
+  assert.equal(typeof openaiState.bodies.at(-1).messages[0].content, "string");
 
+  // gpt-5.6+: breakpoint-scoped caching — inject breakpoint at end of the shared prefix + stable key
   await fetch(`${proxyUrl}/v1/chat/completions`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${ck}` },
-    body: JSON.stringify({ model: "gpt-4o", prompt_cache_key: "mine", messages: [{ role: "user", content: "q" }] }),
+    body: JSON.stringify({ model: "gpt-5.6-sol", messages: [{ role: "system", content: BIGSYS }, { role: "user", content: "q one" }] }),
+  });
+  const b1 = openaiState.bodies.at(-1);
+  assert.match(b1.prompt_cache_key, /^cai-[0-9a-f]{16}$/);
+  assert.equal(b1.messages[0].content[0].text, BIGSYS);
+  assert.deepEqual(b1.messages[0].content[0].prompt_cache_breakpoint, { mode: "explicit" });
+
+  // the key must be STABLE across different user messages (a per-call key
+  // defeats cache routing — that mistake caused the run-20260718 hit-rate drop)
+  await fetch(`${proxyUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ck}` },
+    body: JSON.stringify({ model: "gpt-5.6-sol", messages: [{ role: "system", content: BIGSYS }, { role: "user", content: "a totally different question" }] }),
+  });
+  assert.equal(openaiState.bodies.at(-1).prompt_cache_key, b1.prompt_cache_key, "key must not vary per call");
+
+  // caller-set caching params are never replaced
+  await fetch(`${proxyUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ck}` },
+    body: JSON.stringify({ model: "gpt-5.6-sol", prompt_cache_key: "mine", messages: [{ role: "system", content: BIGSYS }, { role: "user", content: "q" }] }),
   });
   assert.equal(openaiState.bodies.at(-1).prompt_cache_key, "mine", "existing key must never be replaced");
+  assert.equal(typeof openaiState.bodies.at(-1).messages[0].content, "string", "no breakpoint when caller opted in themselves");
+
+  // prefixes under the 1024-token cache minimum stay untouched
+  await fetch(`${proxyUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${ck}` },
+    body: JSON.stringify({ model: "gpt-5.6-sol", messages: [{ role: "system", content: "tiny" }, { role: "user", content: "q" }] }),
+  });
+  assert.equal(openaiState.bodies.at(-1).prompt_cache_key, undefined, "below-minimum prefix: no injection");
 });
 
-test("openai keep-alive: prefix saved and pinged after 4min", async () => {
-  // retention '24h' (the new default) would skip pings — pin the short-retention case
-  await pool.query(
-    "UPDATE api_keys SET keepalive_enabled=true, openai_cache_retention='default' WHERE key_hash=$1",
-    [sha256Hex(ck)]);
+test("openai/gemini: keep-alive state is never saved — warming is Anthropic-only", async () => {
+  await pool.query("UPDATE api_keys SET keepalive_enabled=true WHERE key_hash=$1", [sha256Hex(ck)]);
   await fetch(`${proxyUrl}/v1/chat/completions`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${ck}` },
     body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "system", content: BIGSYS }, { role: "user", content: "real" }] }),
   });
-  await waitRows("SELECT 1 FROM keepalive_state WHERE provider='openai' AND encrypted_prefix IS NOT NULL", []);
-
-  const base = Date.now();
-  const deps = {
-    pool,
-    upstreamUrl: "http://127.0.0.1:45881",
-    openaiUpstreamUrl: "http://127.0.0.1:45882",
-    geminiUpstreamUrl: "http://127.0.0.1:45883",
-    encryptionKey: ENC_KEY,
-  };
-  const n = openaiState.bodies.length;
-  const pinged = await keepaliveSweep({ ...deps, now: () => base + PING_AFTER_MS + 60_000 });
-  assert.ok(pinged >= 1, "at least the openai prefix must be pinged");
-  const ping = openaiState.bodies.slice(n).find((b: any) => b.max_completion_tokens === 1);
-  assert.ok(ping, "openai ping must use max_completion_tokens=1");
-  assert.equal(ping.messages[0].content, BIGSYS, "ping must replay the saved prefix");
-
-  const [row] = await waitRows(
-    "SELECT * FROM request_logs WHERE is_keepalive=true AND provider='openai' ORDER BY id DESC LIMIT 1", []
-  );
-  assert.equal(Number(row.cache_read_tokens), 2048, "ping usage metered");
-});
-
-test("gemini keep-alive: systemInstruction prefix saved and pinged", async () => {
   await fetch(`${proxyUrl}/v1beta/models/gemini-2.5-pro:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": ck },
@@ -294,26 +300,9 @@ test("gemini keep-alive: systemInstruction prefix saved and pinged", async () =>
       contents: [{ role: "user", parts: [{ text: "real" }] }],
     }),
   });
-  await waitRows("SELECT 1 FROM keepalive_state WHERE provider='gemini' AND encrypted_prefix IS NOT NULL", []);
-
-  const base = Date.now();
-  const deps = {
-    pool,
-    upstreamUrl: "http://127.0.0.1:45881",
-    openaiUpstreamUrl: "http://127.0.0.1:45882",
-    geminiUpstreamUrl: "http://127.0.0.1:45883",
-    encryptionKey: ENC_KEY,
-  };
-  const n = geminiState.bodies.length;
-  await keepaliveSweep({ ...deps, now: () => base + PING_AFTER_MS + 60_000 });
-  const ping = geminiState.bodies.slice(n).find((b: any) => b.generationConfig?.maxOutputTokens === 1);
-  assert.ok(ping, "gemini ping must use maxOutputTokens=1");
-  assert.equal(ping.systemInstruction.parts[0].text, BIGSYS);
-
-  const [row] = await waitRows(
-    "SELECT * FROM request_logs WHERE is_keepalive=true AND provider='gemini' ORDER BY id DESC LIMIT 1", []
-  );
-  assert.equal(Number(row.cache_read_tokens), 4000);
+  await new Promise((r) => setTimeout(r, 400)); // let fire-and-forget logs land
+  const { rows } = await pool.query("SELECT provider FROM keepalive_state WHERE provider <> 'anthropic'");
+  assert.equal(rows.length, 0, "non-anthropic prefixes must never be stored (run-20260718)");
   await pool.query("UPDATE api_keys SET keepalive_enabled=false WHERE key_hash=$1", [sha256Hex(ck)]);
 });
 
@@ -355,6 +344,11 @@ test("grok: routed to xAI upstream by model prefix, priced with grok table, no p
   const [row] = await waitRows("SELECT * FROM request_logs WHERE provider='grok' ORDER BY id DESC LIMIT 1", []);
   assert.equal(row.model, "grok-4");
   assert.equal(Number(row.cache_read_tokens), 2048);
+  // xAI bills reasoning as output but reports it OUTSIDE completion_tokens —
+  // 40 completion + 500 reasoning must both be metered (run-20260718 bug fix)
+  assert.equal(Number(row.output_tokens), 540);
+  const expectCost = (3000 - 2048) * 3e-6 + 2048 * 3e-6 * 0.25 + 540 * 15e-6;
+  assert.ok(Math.abs(Number(row.cost_usd) - expectCost) < 1e-9, "reasoning tokens billed as output");
   // grok-4: 2048 cached at 25% of $3/MTok → saved = 2048 * 3e-6 * 0.75
   assert.ok(Math.abs(Number(row.saved_usd) - 2048 * 3e-6 * 0.75) < 1e-9);
 });
@@ -460,36 +454,32 @@ test("keepalive: 24h-retention openai keys are skipped; anthropic 1h TTL pings h
   assert.equal(rows[1].pings_today, 0, "openai with 24h retention must not be pinged");
 });
 
-test("keepalive: daily budget is per key — two providers can't each burn the full budget", async () => {
+test("keepalive: daily budget guard — at budget no ping, raised budget pings", async () => {
   const u = await pool.query("INSERT INTO users(email, password_hash) VALUES('budget-sum@t.co','x') RETURNING id");
   const k = await pool.query(
     `INSERT INTO api_keys(user_id, key_hash, key_prefix_display, keepalive_enabled, keepalive_budget_usd_daily,
-        anthropic_key_encrypted, openai_key_encrypted)
-     VALUES($1,$2,'ck_…',true,1.0,$3,$4) RETURNING id`,
-    [u.rows[0].id, sha256Hex(generateApiKey()), encrypt("sk-ant-x", ENC_KEY), encrypt("sk-openai-x", ENC_KEY)]
+        anthropic_key_encrypted)
+     VALUES($1,$2,'ck_…',true,1.0,$3) RETURNING id`,
+    [u.rows[0].id, sha256Hex(generateApiKey()), encrypt("sk-ant-x", ENC_KEY)]
   );
   const base = Date.now();
   const today = new Date(base).toISOString().slice(0, 10);
   const anthroPrefix = encrypt(JSON.stringify({ model: "claude-sonnet-4-5", messages: [{ role: "user", content: "ctx" }] }), ENC_KEY);
-  const openaiPrefix = encrypt(JSON.stringify({ model: "gpt-4o", messages: [{ role: "system", content: "ctx" }] }), ENC_KEY);
-  // each provider row sits at $0.60 — under the $1 budget alone, over it combined
   await pool.query(
     `INSERT INTO keepalive_state(api_key_id, provider, encrypted_prefix, prefix_token_estimate, last_request_at, spend_today_usd, spend_day)
-     VALUES($1,'anthropic',$2,2000,to_timestamp($4/1000.0),0.6,$5::date),
-           ($1,'openai',$3,2000,to_timestamp($4/1000.0),0.6,$5::date)`,
-    [k.rows[0].id, anthroPrefix, openaiPrefix, base, today]
+     VALUES($1,'anthropic',$2,2000,to_timestamp($3/1000.0),1.0,$4::date)`,
+    [k.rows[0].id, anthroPrefix, base, today]
   );
-  const deps = {
-    pool,
-    upstreamUrl: "http://127.0.0.1:45881",
-    openaiUpstreamUrl: "http://127.0.0.1:45882",
-    geminiUpstreamUrl: "http://127.0.0.1:45883",
-    encryptionKey: ENC_KEY,
-  };
+  const deps = { pool, upstreamUrl: "http://127.0.0.1:45881", encryptionKey: ENC_KEY };
   await keepaliveSweep({ ...deps, now: () => base + PING_AFTER_MS + 60_000 });
-  const { rows } = await pool.query(
+  let { rows } = await pool.query(
     "SELECT pings_today FROM keepalive_state WHERE api_key_id=$1", [k.rows[0].id]);
-  assert.deepEqual(rows.map((r: any) => r.pings_today), [0, 0], "combined spend over budget: no provider may ping");
+  assert.equal(rows[0].pings_today, 0, "spend at budget: no ping");
+
+  await pool.query("UPDATE api_keys SET keepalive_budget_usd_daily=2.0 WHERE id=$1", [k.rows[0].id]);
+  await keepaliveSweep({ ...deps, now: () => base + PING_AFTER_MS + 60_000 });
+  rows = (await pool.query("SELECT pings_today FROM keepalive_state WHERE api_key_id=$1", [k.rows[0].id])).rows;
+  assert.equal(rows[0].pings_today, 1, "budget raised: ping goes out");
 });
 
 test("warm hold: anthropic command intercepted, hold set, nothing forwarded", async () => {
@@ -684,45 +674,129 @@ test("warm hold: gemini command intercepted with candidates-shaped reply", async
   assert.equal(geminiState.bodies.length, before, "command must not reach the upstream");
 });
 
-test("keepalive: openai 24h retention pings 30m-class models per window, skips 24h-class", async () => {
+test("keepalive: legacy non-anthropic state rows are never pinged — warming is Anthropic-only", async () => {
   const u = await pool.query("INSERT INTO users(email, password_hash) VALUES('cls@t.co','x') RETURNING id");
-  const mkKey = async () => {
-    const k = await pool.query(
-      `INSERT INTO api_keys(user_id, key_hash, key_prefix_display, keepalive_enabled, openai_cache_retention, openai_key_encrypted)
-       VALUES($1,$2,'ck_…',true,'24h',$3) RETURNING id`,
-      [u.rows[0].id, sha256Hex(generateApiKey()), encrypt("sk-openai-x", ENC_KEY)]
-    );
-    return k.rows[0].id as number;
-  };
-  const k56 = await mkKey(); // gpt-5.6 → 30m windows: ping at 26min, not 5min
-  const k55 = await mkKey(); // gpt-5.5 → provider holds 24h: never ping
+  const k = await pool.query(
+    `INSERT INTO api_keys(user_id, key_hash, key_prefix_display, keepalive_enabled, openai_key_encrypted, gemini_key_encrypted)
+     VALUES($1,$2,'ck_…',true,$3,$4) RETURNING id`,
+    [u.rows[0].id, sha256Hex(generateApiKey()), encrypt("sk-openai-x", ENC_KEY), encrypt("gm-key-x", ENC_KEY)]
+  );
   const base = Date.now();
-  const mkState = (id: number, model: string) =>
+  // rows a pre-migration deployment might have left behind
+  const mkState = (provider: string, model: string, prefix: object) =>
     pool.query(
       `INSERT INTO keepalive_state(api_key_id, provider, encrypted_prefix, model, prefix_token_estimate, last_request_at)
-       VALUES($1,'openai',$2,$3,2000,to_timestamp($4/1000.0))`,
-      [id, encrypt(JSON.stringify({ model, messages: [{ role: "system", content: "ctx" }] }), ENC_KEY), model, base]
+       VALUES($1,$2,$3,$4,2000,to_timestamp($5/1000.0))`,
+      [k.rows[0].id, provider, encrypt(JSON.stringify(prefix), ENC_KEY), model, base]
     );
-  await mkState(k56, "gpt-5.6");
-  await mkState(k55, "gpt-5.5");
+  await mkState("openai", "gpt-4o", { model: "gpt-4o", messages: [{ role: "system", content: "ctx" }] });
+  await mkState("gemini", "gemini-2.5-pro", { model: "gemini-2.5-pro", systemInstruction: { parts: [{ text: "ctx" }] } });
 
-  const deps = {
-    pool,
-    upstreamUrl: "http://127.0.0.1:45881",
-    openaiUpstreamUrl: "http://127.0.0.1:45882",
-    geminiUpstreamUrl: "http://127.0.0.1:45883",
-    encryptionKey: ENC_KEY,
+  const deps = { pool, upstreamUrl: "http://127.0.0.1:45881", encryptionKey: ENC_KEY };
+  const nOpenai = openaiState.bodies.length;
+  const nGemini = geminiState.bodies.length;
+  for (const idle of [PING_AFTER_MS + 60_000, 26 * 60_000, 56 * 60_000]) {
+    await keepaliveSweep({ ...deps, now: () => base + idle });
+  }
+  const { rows } = await pool.query(
+    "SELECT provider, pings_today FROM keepalive_state WHERE api_key_id=$1 ORDER BY provider", [k.rows[0].id]);
+  assert.deepEqual(rows.map((r: any) => [r.provider, r.pings_today]), [["gemini", 0], ["openai", 0]]);
+  assert.equal(openaiState.bodies.length, nOpenai, "no openai ping traffic");
+  assert.equal(geminiState.bodies.length, nGemini, "no gemini ping traffic");
+});
+
+test("warm hold ≥30min on a 5m key: ONE 1h-TTL upgrade ping now, then 55m cadence", async () => {
+  const u = await pool.query("INSERT INTO users(email, password_hash) VALUES('hold-1h@t.co','x') RETURNING id");
+  const k = await pool.query(
+    `INSERT INTO api_keys(user_id, key_hash, key_prefix_display, keepalive_enabled, anthropic_key_encrypted, anthropic_cache_ttl)
+     VALUES($1,$2,'ck_…',true,$3,'5m') RETURNING id`,
+    [u.rows[0].id, sha256Hex(generateApiKey()), encrypt("sk-ant-x", ENC_KEY)]
+  );
+  const base = Date.now();
+  const prefix = {
+    model: "claude-sonnet-4-5",
+    system: [{ type: "text", text: "ctx", cache_control: { type: "ephemeral" } }],
+    messages: [],
   };
-  const pings = async (id: number) =>
-    (await pool.query("SELECT pings_today FROM keepalive_state WHERE api_key_id=$1", [id])).rows[0].pings_today;
+  await pool.query(
+    `INSERT INTO keepalive_state(api_key_id, provider, encrypted_prefix, prefix_token_estimate, last_request_at)
+     VALUES($1,'anthropic',$2,2000,to_timestamp($3/1000.0))`,
+    [k.rows[0].id, encrypt(JSON.stringify(prefix), ENC_KEY), base]
+  );
+  // a 2-hour hold — comfortably past the 30min upgrade threshold
+  await pool.query(
+    "UPDATE api_keys SET keepalive_hold_until = to_timestamp($2/1000.0) WHERE id=$1",
+    [k.rows[0].id, base + 2 * 3600_000]
+  );
+  const deps = { pool, upstreamUrl: "http://127.0.0.1:45881", encryptionKey: ENC_KEY };
+  const pings = async () =>
+    (await pool.query("SELECT pings_today FROM keepalive_state WHERE api_key_id=$1", [k.rows[0].id])).rows[0].pings_today;
 
-  // 5 minutes idle: standard cadence would ping here — a 30m-window model must not
-  await keepaliveSweep({ ...deps, now: () => base + PING_AFTER_MS + 60_000 });
-  assert.equal(await pings(k56), 0, "gpt-5.6 must wait for the 25min window");
-  assert.equal(await pings(k55), 0);
+  // 30s after the hold lands: the 5m entry is still warm — a 1h marker would
+  // only READ it (measured, prod e2e 2026-07-18), so the sweep stays silent
+  // and lets it expire. No 4-minute cadence either.
+  await keepaliveSweep({ ...deps, now: () => base + 30_000 });
+  await keepaliveSweep({ ...deps, now: () => base + PING_AFTER_MS + 30_000 });
+  assert.equal(await pings(), 0, "silent while the 5m entry is still warm");
 
-  // 26 minutes idle: the 30m window needs its re-warm; 24h-class still silent
-  await keepaliveSweep({ ...deps, now: () => base + 26 * 60_000 });
-  assert.equal(await pings(k56), 1, "gpt-5.6 pinged once per 30m window");
-  assert.equal(await pings(k55), 0, "gpt-5.5: OpenAI holds the cache 24h — no pings ever");
+  // just past 5m expiry: the upgrade fires once and cold-writes the 1h TTL
+  await keepaliveSweep({ ...deps, now: () => base + TTL_5M_MS + 60_000 });
+  assert.equal(await pings(), 1, "upgrade ping fires right after 5m expiry");
+  const upgradeBody = anthroState.bodies.at(-1);
+  assert.deepEqual(upgradeBody.system[0].cache_control, { type: "ephemeral", ttl: "1h" },
+    "hold upgrade must write the 1h TTL");
+
+  // 30 minutes in: the 1h entry is alive — NO 4-minute cadence
+  await keepaliveSweep({ ...deps, now: () => base + 30 * 60_000 });
+  assert.equal(await pings(), 1, "no pings while the 1h entry is alive");
+
+  // ~56 minutes after the upgrade: one refresh per 55m window keeps it warm
+  await keepaliveSweep({ ...deps, now: () => base + 62 * 60_000 });
+  assert.equal(await pings(), 2, "hourly refresh, not 4-minute pings");
+  assert.deepEqual(anthroState.bodies.at(-1).system[0].cache_control, { type: "ephemeral", ttl: "1h" });
+
+  // shortly after: still inside the fresh window — silent
+  await keepaliveSweep({ ...deps, now: () => base + 64 * 60_000 });
+  assert.equal(await pings(), 2);
+});
+
+test("breaker auto-pause: injection stops while the prefix keeps changing, resumes when stable", async () => {
+  const { resetBreakerPause } = await import("../src/logic/breakerPause.js");
+  resetBreakerPause();
+  // a broken prefix never reads from cache — reflect that in the mock usage
+  const savedUsage = { ...anthroState.usage };
+  anthroState.usage = { ...anthroState.usage, cache_read_input_tokens: 0 };
+  const u = await pool.query("INSERT INTO users(email, password_hash) VALUES('brk@t.co','x') RETURNING id");
+  const brkCk = generateApiKey();
+  await pool.query(
+    `INSERT INTO api_keys(user_id, key_hash, key_prefix_display, anthropic_key_encrypted)
+     VALUES($1,$2,'ck_…',$3)`,
+    [u.rows[0].id, sha256Hex(brkCk), encrypt("sk-ant-x", ENC_KEY)]
+  );
+  const send = async (sys: string) => {
+    await fetch(`${proxyUrl}/v1/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": brkCk },
+      body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 8, system: sys + " " + BIGSYS,
+        messages: [{ role: "user", content: "q" }] }),
+    });
+    await new Promise((r) => setTimeout(r, 250)); // let the async breaker log land
+    return anthroState.bodies.at(-1);
+  };
+
+  // timestamp-style breaker: system changes every call
+  const b1 = await send("t=1");
+  assert.ok(Array.isArray(b1.system), "call 1 injected (no history yet)");
+  await send("t=2"); // breaker #1 observed
+  await send("t=3"); // breaker #2 observed → paused from the next call
+  const b4 = await send("t=4");
+  assert.equal(typeof b4.system, "string", "paused: request passes through untouched");
+
+  // prefix stabilizes: the pause clears once two consecutive requests share
+  // the same prefix, and injection resumes on the call after that
+  await send("stable"); // transition call — still differs from t=4
+  await send("stable"); // matches previous → streak cleared
+  const b7 = await send("stable");
+  assert.ok(Array.isArray(b7.system), "resumed after a stable prefix");
+  anthroState.usage = savedUsage;
 });

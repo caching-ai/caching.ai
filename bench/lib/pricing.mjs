@@ -12,7 +12,14 @@ export const PRICES = {
     { match: "claude-haiku-4-5", inputPerMTok: 1, outputPerMTok: 5, minCacheableTokens: 4096 },
   ],
   openai: [
-    // substring match, first hit wins — gpt-5.5 / gpt-5.6-* all match "gpt-5"
+    // substring match, first hit wins — the gpt-5.6 family has its own list
+    // prices (sol $5/$30, terra $2.5/$15, luna $1/$6) and bills cache WRITES
+    // at 1.25x. ERRATA: run-20260718 priced gpt-5.6-sol via the "gpt-5" row
+    // ($1.25/$10, write 1x) — its absolute dollar figures are ~4x low, the
+    // A-vs-C ratios are unaffected (same mispricing in every arm).
+    { match: "gpt-5.6-sol", inputPerMTok: 5, outputPerMTok: 30, cachedInputMult: 0.1, writeMult: 1.25 },
+    { match: "gpt-5.6-terra", inputPerMTok: 2.5, outputPerMTok: 15, cachedInputMult: 0.1, writeMult: 1.25 },
+    { match: "gpt-5.6-luna", inputPerMTok: 1, outputPerMTok: 6, cachedInputMult: 0.1, writeMult: 1.25 },
     { match: "gpt-5", inputPerMTok: 1.25, outputPerMTok: 10, cachedInputMult: 0.1 },
     { match: "gpt-4o", inputPerMTok: 2.5, outputPerMTok: 10, cachedInputMult: 0.5 },
   ],
@@ -44,10 +51,10 @@ export function costOf(provider, model, u) {
   const p = priceFor(provider, model);
   const per = p.inputPerMTok / 1e6;
   const perOut = p.outputPerMTok / 1e6;
-  // Anthropic bills cache writes at a 1.25x premium; OpenAI's cache_write_tokens
-  // bill at the plain input price (no premium), Gemini reports no write tokens.
+  // Anthropic bills cache writes at a 1.25x premium; GPT-5.6+ cache_write_tokens
+  // also bill at 1.25x (per-row writeMult), Gemini reports no write tokens.
   const readMult = provider === "anthropic" ? ANTHROPIC_CACHE_READ_MULT : p.cachedInputMult;
-  const writeMult = provider === "anthropic" ? ANTHROPIC_CACHE_WRITE_5M_MULT : 1;
+  const writeMult = provider === "anthropic" ? ANTHROPIC_CACHE_WRITE_5M_MULT : (p.writeMult ?? 1);
   const inputSideUsd =
     (u.input || 0) * per + (u.cacheWrite || 0) * per * writeMult + (u.cacheRead || 0) * per * readMult;
   return { inputSideUsd, outputUsd: (u.output || 0) * perOut };

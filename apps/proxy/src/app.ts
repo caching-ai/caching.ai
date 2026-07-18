@@ -9,16 +9,19 @@ import {
   computeCostGrok,
   type Usage,
 } from "@caching/shared";
-import { injectCacheControl, estimatePrefixTokens } from "./logic/cacheControl.js";
-import { estimateTokens, sha256Hex } from "@caching/shared";
+import {
+  injectCacheControl,
+  injectOpenAIBreakpoint,
+  injectOpenAIBreakpointResponses,
+  estimatePrefixTokens,
+} from "./logic/cacheControl.js";
+import { sha256Hex } from "@caching/shared";
 import {
   prefixBlockHashes,
   prefixBlockHashesOpenAI,
   prefixBlockHashesGemini,
   detectBreaker,
   extractKeepalivePrefix,
-  extractKeepalivePrefixOpenAI,
-  extractKeepalivePrefixGemini,
   type BlockHash,
 } from "./logic/prefixHash.js";
 import { tapSse, tapSseUsage, emptyUsage, mergeUsage } from "./logic/usageTap.js";
@@ -40,6 +43,7 @@ import {
   responsesHoldResponse,
   geminiHoldResponse,
 } from "./logic/holdResponse.js";
+import { noteBreakerObservation, injectionPaused } from "./logic/breakerPause.js";
 import {
   findApiKey,
   insertRequestLog,
@@ -231,6 +235,9 @@ export function buildApp(deps: AppDeps) {
         if (p.hashes) {
           const prev = await lastPrefixHashes(pool, p.key.id, p.provider, p.model);
           breaker = detectBreaker(prev, p.hashes);
+          noteBreakerObservation(
+            p.key.id, p.provider, p.model, breaker, p.usage.cache_read_input_tokens > 0
+          );
         }
         await insertRequestLog(pool, {
           apiKeyId: p.key.id,
@@ -294,7 +301,11 @@ export function buildApp(deps: AppDeps) {
     const dk = decryptProviderKey(key.anthropic_key_encrypted, "Anthropic");
     if ("err" in dk) return dk.err;
 
-    if (key.auto_cache_control) body = injectCacheControl(body, model, key.anthropic_cache_ttl).body;
+    // injection auto-pauses while the prefix keeps changing (cache breaker):
+    // nobody can cache it, so breakpoints would only buy write premiums
+    if (key.auto_cache_control && !injectionPaused(key.id, "anthropic", model)) {
+      body = injectCacheControl(body, model, key.anthropic_cache_ttl).body;
+    }
 
     const hashes = prefixBlockHashes(body);
     const isStream = body?.stream === true;
@@ -354,14 +365,19 @@ export function buildApp(deps: AppDeps) {
   // ---------- OpenAI: chat/completions + responses (observation) ----------
   // usage shapes: chat/completions {prompt_tokens, completion_tokens,
   // prompt_tokens_details:{cached_tokens}} · responses {input_tokens,
-  // output_tokens, input_tokens_details:{cached_tokens}}
-  function extractOpenAIUsage(u: any): { prompt: number; completion: number; cached: number } | null {
+  // output_tokens, input_tokens_details:{cached_tokens}}. `reasoning` is
+  // carried separately because xAI reports reasoning tokens OUTSIDE
+  // completion_tokens (OpenAI includes them) — see finish().
+  interface OpenAIWireUsage { prompt: number; completion: number; cached: number; written: number; reasoning: number }
+  function extractOpenAIUsage(u: any): OpenAIWireUsage | null {
     if (!u || typeof u !== "object") return null;
     if (typeof u.prompt_tokens === "number") {
       return {
         prompt: u.prompt_tokens,
         completion: u.completion_tokens ?? 0,
         cached: u.prompt_tokens_details?.cached_tokens ?? 0,
+        written: u.prompt_tokens_details?.cache_write_tokens ?? 0, // 5.6+ era, billed 1.25x
+        reasoning: u.completion_tokens_details?.reasoning_tokens ?? 0,
       };
     }
     if (typeof u.input_tokens === "number") {
@@ -369,6 +385,8 @@ export function buildApp(deps: AppDeps) {
         prompt: u.input_tokens,
         completion: u.output_tokens ?? 0,
         cached: u.input_tokens_details?.cached_tokens ?? 0,
+        written: u.input_tokens_details?.cache_write_tokens ?? 0,
+        reasoning: u.output_tokens_details?.reasoning_tokens ?? 0,
       };
     }
     return null;
@@ -424,20 +442,20 @@ export function buildApp(deps: AppDeps) {
     const isChat = c.req.path === "/v1/chat/completions";
     const hashes = isChatLike ? prefixBlockHashesOpenAI(body) : null;
 
-    // OpenAI's cache-routing optimization: a stable prompt_cache_key routes
-    // identical prefixes to the same cache shard, lifting hit rates. Inject a
-    // deterministic key derived from the prefix when the caller sends none.
-    // (OpenAI only — xAI doesn't document the parameter.)
-    if (!isGrok && key.auto_cache_control && isChat && body.prompt_cache_key === undefined && hashes && hashes.length) {
-      body = { ...body, prompt_cache_key: "cai-" + sha256Hex(JSON.stringify(hashes)).slice(0, 16) };
+    // Pre-GPT-5.6 models get NO injection: bench run-20260718 measured LOWER
+    // hit rates with a derived prompt_cache_key than with OpenAI's default
+    // routing (S2: gpt-4o 88%→43%, gpt-5.5 80%→47% — our old key hashed the
+    // first user message, so it changed every call), and their upstream
+    // retention needs no help. GPT-5.6+ is the opposite: breakpoint-scoped
+    // caching yields 0% cross-suffix hits for naive traffic, and injecting an
+    // explicit breakpoint + STABLE prefix-derived key restores them (verified
+    // live: 0 → 99.6% of the prefix). Caller-set params always pass through.
+    // same breaker auto-pause as Anthropic: a changing prefix can't be cached,
+    // so 5.6 breakpoints would only buy 1.25x write premiums
+    if (!isGrok && key.auto_cache_control && !injectionPaused(key.id, provider, model)) {
+      if (isChat) body = injectOpenAIBreakpoint(body, model).body;
+      else if (isResponsesPath) body = injectOpenAIBreakpointResponses(body, model).body;
     }
-    // OpenAI extended (24h) retention needs no injection: since 2026 it IS the
-    // upstream default for non-ZDR orgs on pre-GPT-5.6 models, GPT-5.6+ moved
-    // to prompt_cache_options (30m only) and deprecated the old param, and ZDR
-    // orgs must not receive it. The per-key setting's remaining job is telling
-    // the keep-alive engine to skip warming pings (the provider holds the
-    // cache). Caller-provided values still pass through untouched.
-    // https://developers.openai.com/api/docs/guides/prompt-caching
     const started = Date.now();
 
     const headers = forwardHeaders(c);
@@ -450,37 +468,38 @@ export function buildApp(deps: AppDeps) {
       headers.set("x-grok-conv-id", "cai-" + sha256Hex(JSON.stringify(hashes)).slice(0, 16));
     }
 
-    const kaPrefix = key.keepalive_enabled && isChat ? extractKeepalivePrefixOpenAI(body) : null;
-    const kaTokens = kaPrefix ? estimateTokens(JSON.stringify(kaPrefix)) : 0;
-
+    // No keep-alive prefix is saved for OpenAI/Grok: warming pings are
+    // Anthropic-only since bench run-20260718 (see keepalive.ts).
     const upstreamRes = await upstreamFetch(doFetch, new URL(c.req.path, upstream), {
       method: "POST",
       headers,
       body: JSON.stringify(body),
     }, isStream ? 600_000 : 180_000);
 
-    const finish = (status: number, raw: { prompt: number; completion: number; cached: number } | null) => {
-      const u = raw ?? { prompt: 0, completion: 0, cached: 0 };
+    const finish = (status: number, raw: OpenAIWireUsage | null) => {
+      const u = raw ?? { prompt: 0, completion: 0, cached: 0, written: 0, reasoning: 0 };
+      // xAI reasoning tokens are billed as output but sit outside
+      // completion_tokens; OpenAI's are already included in completion.
+      const outTokens = isGrok ? u.completion + u.reasoning : u.completion;
       const usage: Usage = {
-        input_tokens: u.prompt - u.cached,
-        output_tokens: u.completion,
-        cache_creation_input_tokens: 0, // OpenAI auto-caching has no write premium
+        input_tokens: u.prompt - u.cached - u.written,
+        output_tokens: outTokens,
+        cache_creation_input_tokens: u.written, // GPT-5.6+ writes bill at 1.25x
         cache_read_input_tokens: u.cached,
       };
-      logRequest(
-        {
-          key, provider, model, status, started, isStream, usage,
-          cost: (isGrok ? computeCostGrok : computeCostOpenAI)(model, {
-            prompt_tokens: u.prompt, completion_tokens: u.completion, cached_tokens: u.cached,
-          }),
-          hashes,
-        },
-        async () => {
-          if (status < 400 && kaPrefix && kaTokens >= 1024) {
-            await saveKeepaliveState(pool, key.id, provider, kaPrefix, kaTokens, encryptionKey);
-          }
-        }
-      );
+      logRequest({
+        key, provider, model, status, started, isStream, usage,
+        cost: isGrok
+          ? computeCostGrok(model, {
+              prompt_tokens: u.prompt, completion_tokens: u.completion,
+              cached_tokens: u.cached, reasoning_tokens: u.reasoning,
+            })
+          : computeCostOpenAI(model, {
+              prompt_tokens: u.prompt, completion_tokens: u.completion,
+              cached_tokens: u.cached, cache_write_tokens: u.written,
+            }),
+        hashes,
+      });
     };
 
     if (upstreamRes.status === 401 || (isGrok && upstreamRes.status === 403)) {
@@ -493,7 +512,7 @@ export function buildApp(deps: AppDeps) {
     respHeaders.delete("content-encoding");
 
     if (isStream && (upstreamRes.headers.get("content-type") ?? "").includes("text/event-stream") && upstreamRes.body) {
-      let last: { prompt: number; completion: number; cached: number } | null = null;
+      let last: OpenAIWireUsage | null = null;
       const tapped = upstreamRes.body.pipeThrough(
         tapSse(
           (evt) => {
@@ -512,7 +531,7 @@ export function buildApp(deps: AppDeps) {
       finish(upstreamRes.status, null);
       return humanizeUpstreamAuthError("Grok (xAI)");
     }
-    let u: { prompt: number; completion: number; cached: number } | null = null;
+    let u: OpenAIWireUsage | null = null;
     try {
       u = extractOpenAIUsage(JSON.parse(text)?.usage);
     } catch { /* non-JSON */ }
@@ -588,9 +607,8 @@ export function buildApp(deps: AppDeps) {
     const started = Date.now();
     headers.set("content-type", "application/json");
 
-    const kaPrefix = key.keepalive_enabled ? extractKeepalivePrefixGemini(body, model) : null;
-    const kaTokens = kaPrefix ? estimateTokens(JSON.stringify(kaPrefix)) : 0;
-
+    // No keep-alive prefix is saved for Gemini: bench run-20260718 measured 0
+    // implicit-cache hits from warming pings — warming is Anthropic-only now.
     const upstreamRes = await upstreamFetch(doFetch, url,
       { method: "POST", headers, body: JSON.stringify(body) },
       isStream ? 600_000 : 180_000);
@@ -603,22 +621,15 @@ export function buildApp(deps: AppDeps) {
         cache_creation_input_tokens: 0,
         cache_read_input_tokens: u.cached,
       };
-      logRequest(
-        {
-          key, provider: "gemini", model, status, started, isStream, usage,
-          cost: computeCostGemini(model, {
-            promptTokenCount: u.prompt,
-            candidatesTokenCount: u.completion,
-            cachedContentTokenCount: u.cached,
-          }),
-          hashes,
-        },
-        async () => {
-          if (status < 400 && kaPrefix && kaTokens >= 1024) {
-            await saveKeepaliveState(pool, key.id, "gemini", kaPrefix, kaTokens, encryptionKey);
-          }
-        }
-      );
+      logRequest({
+        key, provider: "gemini", model, status, started, isStream, usage,
+        cost: computeCostGemini(model, {
+          promptTokenCount: u.prompt,
+          candidatesTokenCount: u.completion,
+          cachedContentTokenCount: u.cached,
+        }),
+        hashes,
+      });
     };
 
     if (upstreamRes.status === 401 || upstreamRes.status === 403) {

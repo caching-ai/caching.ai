@@ -14,6 +14,17 @@ export function mergeUsage(target: Usage, u: any) {
   ] as const) {
     if (typeof u[k] === "number") target[k] = u[k];
   }
+  // Anthropic per-TTL write breakdown — lets computeCost bill 1h writes at
+  // their real 2x premium instead of assuming everything is a 5m write
+  const cc = u.cache_creation;
+  if (cc && typeof cc === "object") {
+    if (typeof cc.ephemeral_5m_input_tokens === "number") {
+      target.cache_creation_5m_input_tokens = cc.ephemeral_5m_input_tokens;
+    }
+    if (typeof cc.ephemeral_1h_input_tokens === "number") {
+      target.cache_creation_1h_input_tokens = cc.ephemeral_1h_input_tokens;
+    }
+  }
 }
 
 /**
