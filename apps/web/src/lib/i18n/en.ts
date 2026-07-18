@@ -7,6 +7,7 @@ export const en = {
   },
   nav: { docs: "Docs", signIn: "Sign in", startFree: "Start free", dashboard: "Dashboard" },
   hero: {
+    banner: "GPT-5.6 changed prompt caching — SDK defaults now get 0% prefix hits. We restore 97.8%.",
     eyebrow: "AI COST OPTIMIZATION",
     titleA: "Your cache goes cold.",
     titleB: "Your bill goes 10×.",

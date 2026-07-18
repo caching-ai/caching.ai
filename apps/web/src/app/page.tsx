@@ -73,6 +73,15 @@ export default async function Landing() {
 
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 pb-12 pt-20 text-center">
+        {/* timely hook: GPT-5.6 moved to opt-in (breakpoint) caching */}
+        <a
+          href="#benchmark"
+          className="mx-auto mb-6 inline-flex max-w-full items-center gap-2 rounded-full border border-hairline bg-canvas px-4 py-1.5 text-[13px] text-body-mid transition-colors hover:border-ink/30 hover:text-ink"
+        >
+          <span aria-hidden>⚡</span>
+          <span className="truncate">{d.hero.banner}</span>
+          <span aria-hidden className="text-mute">→</span>
+        </a>
         <p className="eyebrow">{d.hero.eyebrow}</p>
         <h1 className="mx-auto mt-4 max-w-4xl text-[42px] font-semibold leading-[1.1] tracking-[-0.8px] text-ink md:text-[72px]">
           {d.hero.titleA}
@@ -124,7 +133,7 @@ export default async function Landing() {
       </section>
 
       {/* Benchmark: measured results (BENCHMARK.md is the long-form source) */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
+      <section id="benchmark" className="mx-auto max-w-6xl px-6 py-20">
         <p className="eyebrow text-center">{d.bench.eyebrow}</p>
         <h2 className="mx-auto mt-3 max-w-3xl whitespace-pre-line text-center text-display-lg text-ink">{d.bench.title}</h2>
         <p className="mx-auto mt-5 max-w-3xl text-center text-[17px] leading-relaxed text-body-mid [text-wrap:balance]">{d.bench.lead}</p>

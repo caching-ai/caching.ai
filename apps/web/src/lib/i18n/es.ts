@@ -8,6 +8,7 @@ export const es: Dict = {
   },
   nav: { docs: "Docs", signIn: "Iniciar sesión", startFree: "Empieza gratis", dashboard: "Panel" },
   hero: {
+    banner: "GPT-5.6 cambió el caché de prompts — el SDK por defecto acierta 0%; nosotros restauramos el 97,8%.",
     eyebrow: "OPTIMIZACIÓN DE COSTES DE IA",
     titleA: "Tu caché de IA, viva.",
     titleB: "Tu factura, a salvo.",

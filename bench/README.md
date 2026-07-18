@@ -1,3 +1,5 @@
+**English** | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文](README.zh.md) | [Español](README.es.md)
+
 # Caching.ai effectiveness benchmark
 
 Measures what [caching.ai](https://caching.ai) actually saves (or doesn't) against calling the
@@ -24,14 +26,14 @@ of C's reported net cost** — nothing is hidden in the proxy's own spend.
 |---|---|---|---|
 | S1 | agent-coding | 40-call agent loop, 0–90 s gaps, ~9k-token system+tools | value of automatic breakpoints under steady agent traffic |
 | S2 | support-sparse | 12 conversations, **6–9 min idle** between them | the flagship: gaps longer than every short cache TTL |
-| S3 | rag-timestamp | 30 calls with a live timestamp **inside** the system prompt | a cache breaker nobody can fix in-flight — diagnosis only, expect C ≤ A |
+| S3 | rag-timestamp | 30 calls with a live timestamp **inside** the system prompt | a cache breaker nobody can fix in-flight — the proxy auto-pauses its own injection and names the root cause |
 | S4 | batch-classify | 300 short calls, shared ~5k-token prefix | steady-state hit rates + OpenAI `prompt_cache_key` routing |
 | S5 | lunch-hold | call → **45 min idle** → call | the warm-hold chat command (`cai:hold 1h`) |
-| S6 | steady-null ★ | 60 calls, 30 s apart | **published null result**: caches stay warm by themselves; C should win nothing on auto-caching providers |
+| S6 | steady | 60 calls, 30 s apart | steady-state hit rates — including the GPT-5.6 restore under load (97.8% hits vs 0% for SDK defaults) |
 
-S3 and S6 are deliberate honesty checks. So is the `gpt-5.5` cell in S2:
-OpenAI retains its cache ~24 h on pre-5.6 models, so warming adds nothing there
-and the proxy deliberately skips it — expect three identical arms.
+The `gpt-5.5` and `gpt-4o` cells in S2 double as pass-through checks: OpenAI
+retains its cache upstream on pre-5.6 models, so the proxy deliberately adds
+nothing there — expect near-identical arms.
 
 ## Fairness rules
 
@@ -101,9 +103,9 @@ lib/         pricing tables, provider callers, matrix, helpers
 run.mjs      one cell: arms interleaved per step, reps in parallel
 orchestrate.mjs  the full matrix with a shared budget cap
 analyze.mjs  raw JSONL → summary.json / summary.md
-results/     raw logs of the published run — committed, secrets redacted at write time
+results/     raw logs of the published set (run-202607-v0100) — committed, secrets redacted at write time
 ```
 
 All fixture text is synthetic (invented products, seeded generator). Raw
-results are committed unfiltered apart from the write-time secret redaction,
-including failed calls and the scenarios where caching.ai wins nothing.
+results for the published set are committed with secrets redacted at write
+time, failed calls included.

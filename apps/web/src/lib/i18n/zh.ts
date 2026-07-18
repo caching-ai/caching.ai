@@ -8,6 +8,7 @@ export const zh: Dict = {
   },
   nav: { docs: "文档", signIn: "登录", startFree: "免费开始", dashboard: "仪表盘" },
   hero: {
+    banner: "GPT-5.6 改变了提示词缓存 — 原生 SDK 命中 0%，我们恢复到 97.8%。",
     eyebrow: "AI 成本优化",
     titleA: "护住 AI 缓存火种，",
     titleB: "帮你挡下天价账单。",

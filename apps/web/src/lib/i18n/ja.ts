@@ -8,6 +8,7 @@ export const ja: Dict = {
   },
   nav: { docs: "ドキュメント", signIn: "ログイン", startFree: "無料で始める", dashboard: "ダッシュボード" },
   hero: {
+    banner: "GPT-5.6でプロンプトキャッシュが変わりました — 素のSDKはヒット0%、当社は97.8%まで復元します。",
     eyebrow: "AIコスト最適化",
     titleA: "AIキャッシュを絶やさず",
     titleB: "料金爆発を防ぎます。",

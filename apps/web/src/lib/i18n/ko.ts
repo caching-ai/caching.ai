@@ -8,6 +8,7 @@ export const ko: Dict = {
   },
   nav: { docs: "문서", signIn: "로그인", startFree: "무료로 시작", dashboard: "대시보드" },
   hero: {
+    banner: "GPT-5.6부터 프롬프트 캐싱이 바뀌었어요 — 순정 SDK는 히트 0%, 저희는 97.8%로 되살려요.",
     eyebrow: "AI 비용 최적화 솔루션",
     titleA: "AI 캐시 불씨를 살려",
     titleB: "요금 폭탄을 막아드려요.",

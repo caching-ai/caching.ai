@@ -1,3 +1,5 @@
+**English** | [한국어](BENCHMARK.ko.md) | [日本語](BENCHMARK.ja.md) | [中文](BENCHMARK.zh.md) | [Español](BENCHMARK.es.md)
+
 # Does caching.ai actually save money? We measured it.
 
 Three arms, six traffic patterns, seven models, **10,000+ real API calls at
