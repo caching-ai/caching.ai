@@ -14,7 +14,7 @@ export const en = {
     sub: "Providers discount repeated prompts by 90% — while the cache stays warm. Caching.ai is a drop-in proxy that keeps it warm, so the discount actually lands on your bill. One base-URL swap.",
     ctaPrimary: "Start in 2 minutes",
     ctaSecondary: "Read the quickstart",
-    note: "One base-URL swap · Pay 20% of what you save · Save nothing, pay nothing",
+    note: "One base-URL swap · Runs on your own provider keys · Prompts are never stored · Save nothing, pay nothing",
     mock: { wasted: "WASTED SPEND", saved: "SAVED", hitRate: "HIT RATE" },
   },
   visuals: {
@@ -565,6 +565,7 @@ export const en = {
   trust: {
     eyebrow: "TRUST & SECURITY",
     title: "Your keys and prompts, handled like production secrets",
+        lead: "Requests travel on YOUR provider keys, straight to the provider — we never resell models or sit on your data. Bodies pass through byte-for-byte and are never stored; what remains is numbers (token counts, latency, prefix hashes). Want zero third parties? Self-host the exact same code.",
     items: [
       { title: "Your keys stay yours", body: "Provider keys are encrypted at rest with AES-256-GCM, used only to forward your requests, and never logged." },
       { title: "Prompts are never stored", body: "We keep token counts, latency, status codes, and prefix hashes — not your content. The one exception, the Cache Warmer, is opt-in and labeled right on the toggle." },

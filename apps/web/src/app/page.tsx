@@ -401,7 +401,7 @@ export default async function Landing() {
       {/* Open source vs cloud */}
       <section className="mx-auto max-w-6xl px-6 py-20">
         <p className="eyebrow text-center">{d.oss.eyebrow}</p>
-        <h2 className="mx-auto mt-3 max-w-3xl text-center text-display-lg text-ink">{d.oss.title}</h2>
+        <h2 className="mx-auto mt-3 max-w-3xl whitespace-pre-line text-center text-display-lg text-ink">{d.oss.title}</h2>
         <p className="mx-auto mt-5 max-w-2xl text-center text-[17px] leading-relaxed text-body-mid [text-wrap:balance]">{d.oss.sub}</p>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {[
@@ -452,6 +452,7 @@ export default async function Landing() {
       <section className="mx-auto max-w-6xl px-6 py-20">
         <p className="eyebrow text-center">{d.trust.eyebrow}</p>
         <h2 className="mx-auto mt-3 max-w-3xl text-center text-display-lg text-ink">{d.trust.title}</h2>
+        <p className="mx-auto mt-5 max-w-3xl text-center text-[17px] leading-relaxed text-body-mid [text-wrap:balance]">{d.trust.lead}</p>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {d.trust.items.map((it) => (
             <div key={it.title} className="card !p-7">

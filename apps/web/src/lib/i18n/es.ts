@@ -15,7 +15,7 @@ export const es: Dict = {
     sub: "Los desarrolladores de modelos ya descuentan un 90% los prompts repetidos — pero solo mientras la caché sigue caliente. Caching.ai es un proxy drop-in que la recalienta justo antes de que expire, para que ese descuento llegue de verdad a tu factura cada mes. La integración es cambiar una sola base URL.",
     ctaPrimary: "Empieza en 2 minutos",
     ctaSecondary: "Lee el quickstart",
-    note: "Un cambio de base URL · Paga el 20% de lo que ahorres · Si no ahorras, no pagas",
+    note: "Un cambio de base URL · Funciona con tus claves de proveedor · Los prompts nunca se guardan · Paga el 20% de lo que ahorres · Si no ahorras, no pagas",
     mock: { wasted: "GASTO PERDIDO", saved: "AHORRADO", hitRate: "TASA DE ACIERTO" },
   },
   visuals: {
@@ -566,6 +566,7 @@ export const es: Dict = {
   trust: {
     eyebrow: "CONFIANZA Y SEGURIDAD",
     title: "Tus claves y prompts, tratados como secretos de producción",
+        lead: "Las peticiones viajan con TUS claves de proveedor, directas al proveedor — no revendemos modelos ni retenemos tus datos. Los cuerpos pasan byte a byte y nunca se guardan; lo que queda son números (tokens, latencia, hashes). ¿Cero terceros? Autoaloja exactamente el mismo código.",
     items: [
       { title: "Tus claves siguen siendo tuyas", body: "Las claves de proveedor se cifran en reposo con AES-256-GCM, se usan solo para reenviar tus peticiones y nunca se registran en logs." },
       { title: "Los prompts nunca se almacenan", body: "Guardamos recuentos de tokens, latencia, códigos de estado y hashes de prefijos — no tu contenido. La única excepción, Keep-Alive, es opt-in y está indicada en el propio interruptor." },
