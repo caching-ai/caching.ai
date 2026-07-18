@@ -37,8 +37,8 @@ discount actually land:
   1-token pings re-warm your prefix exactly while re-use is economical (up to
   62.5 min), within a daily budget you control. Other providers hold their
   caches upstream on their own (we measured — [BENCHMARK.md](BENCHMARK.md)),
-  so the proxy never spends your budget where a ping can't pay off. Holds
-  of 30+ minutes are served as a single 1h-TTL write instead of pings.
+  so the proxy never spends your budget where a ping can't pay off. Long
+  holds are served as a single 1h-TTL write instead of a ping stream.
   Stepping away? Say `"keep my cache warm for 2 hours"`
   in chat — the proxy answers it itself and holds warming (see below).
 - **Prefix optimizer** — measures which part of your prompt changes between
@@ -49,8 +49,8 @@ discount actually land:
 </p>
 
 **Measured, not promised:** we benchmarked caching.ai against calling the
-providers directly — three arms, six traffic patterns, ~10k calls, raw logs
-committed, including the scenarios where we win nothing. See
+providers directly — three arms, six traffic patterns, ~10k real billed
+calls, raw logs committed and rerunnable with your own keys. See
 [BENCHMARK.md](BENCHMARK.md).
 
 Works with every SDK — integration is a base-URL swap:

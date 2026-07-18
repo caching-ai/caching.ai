@@ -63,9 +63,9 @@ Measured end-to-end (different user suffix per call):
   be cached by anyone. The proxy names the breaker and its likely root cause
   on the dashboard, and automatically pauses its own injection while the
   prefix keeps changing — so a broken prompt never buys write premiums.
-- **Warm holds** ("keep my cache warm for 2 hours" in chat): holds of 30+
-  minutes are served as a single 1 h-TTL cache write plus an hourly refresh —
-  the cheapest way to guarantee a warm return.
+- **Warm holds** ("keep my cache warm for 2 hours" in chat): long holds are
+  served as a single 1 h-TTL cache write plus an hourly refresh; short holds
+  bridge with 0.1× pings — whichever is cheaper for the window you asked for.
 
 **Latency.** The proxy hop was smaller than provider noise in most cells: TTFT
 p50 deltas ranged from −77 ms (C faster, cache hits) to +121 ms (pure

@@ -24,15 +24,15 @@ export const GIVE_UP_AFTER_MS = 62.5 * 60 * 1000;
 // 0.1x ping = 20 pings ≈ 20 hours of idle coverage.
 export const PING_AFTER_1H_MS = 55 * 60 * 1000;
 export const GIVE_UP_1H_MS = 20 * 60 * 60 * 1000;
-// A warm hold of ≥30 min on a 5m-TTL key is cheaper as ONE 1h-TTL cache
-// write (2x) than as 0.1x pings every 4 minutes (break-even at ~30 min:
-// 7.5 pings × 0.1x ≈ the 0.75x extra premium of a 1h write) — run-20260718
-// S5 measured the ping route at +23% vs direct on a 45-min hold.
+// Long warm holds on a 5m-TTL key are cheaper as ONE 1h-TTL cache write (2x,
+// then a 0.1x refresh per 55m window) than as 0.1x pings every 4 minutes.
 // Measured (prod e2e 2026-07-18): a 1h marker on a still-warm 5m entry only
 // READS it — Anthropic does not upgrade an entry's TTL on read. The upgrade
-// write must therefore wait until the 5m entry has EXPIRED, so the cold
-// write lands as a fresh 1h entry (cache gap ≤ one sweep interval).
-export const HOLD_UPGRADE_MIN_MS = 30 * 60 * 1000;
+// write must therefore wait until the 5m entry has EXPIRED (cold write lands
+// as a fresh 1h entry; cache gap ≤ one sweep interval), which prices the
+// upgrade at a full 2x. Break-even vs the 1.5x/hour ping cadence is ~85 min —
+// shorter holds stay on pings.
+export const HOLD_UPGRADE_MIN_MS = 90 * 60 * 1000;
 export const TTL_5M_MS = 5 * 60 * 1000;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
