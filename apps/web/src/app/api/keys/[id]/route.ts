@@ -1,19 +1,26 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { audit, getWorkspace } from "@/lib/org";
 import { encrypt } from "@caching/shared";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const sess = await getSession();
-  if (!sess) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const ws = await getWorkspace();
+  if (!ws) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const sess = ws.session;
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
 
-  const { rows } = await db().query("SELECT id FROM api_keys WHERE id=$1 AND user_id=$2", [
-    id,
-    sess.uid,
-  ]);
-  if (!rows[0]) return NextResponse.json({ error: "Key not found." }, { status: 404 });
+  // personal workspace: own personal keys. Org workspace: own team keys —
+  // or ANY team key for owner/admin (that's what workspace admin means).
+  const { rows } = await db().query("SELECT id, user_id, org_id FROM api_keys WHERE id=$1", [id]);
+  const key = rows[0];
+  const isAdmin = ws.org && (ws.org.role === "owner" || ws.org.role === "admin");
+  const allowed =
+    key &&
+    (ws.org
+      ? key.org_id === ws.org.orgId && (key.user_id === sess.uid || isAdmin)
+      : key.org_id === null && key.user_id === sess.uid);
+  if (!allowed) return NextResponse.json({ error: "Key not found." }, { status: 404 });
 
   const sets: string[] = [];
   const vals: any[] = [];
@@ -90,11 +97,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   if (!sets.length) return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
 
-  vals.push(id, sess.uid);
-  await db().query(
-    `UPDATE api_keys SET ${sets.join(", ")} WHERE id=$${i++} AND user_id=$${i}`,
-    vals
-  );
+  vals.push(id);
+  await db().query(`UPDATE api_keys SET ${sets.join(", ")} WHERE id=$${i}`, vals);
+  if (ws.org && key.user_id !== sess.uid) {
+    await audit(ws.org.orgId, sess, "key.admin_edit", String(key.id), { changed: Object.keys(body) });
+  }
   // privacy: the encrypted keep-alive prefix is only kept while the feature is
   // on — turning it off (or revoking the key) deletes it immediately
   if (body.keepalive_enabled === false || body.revoke === true) {

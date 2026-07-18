@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getWorkspace } from "@/lib/org";
 
 const WINDOWS = [7, 30, 90];
 const MAX_ROWS = 10000;
@@ -20,8 +20,9 @@ const cell = (v: unknown) => {
 
 /** Raw request log download (per-request rows, newest first, capped). */
 export async function GET(req: NextRequest) {
-  const sess = await getSession();
-  if (!sess) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const ws = await getWorkspace();
+  if (!ws) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const sess = ws.session;
 
   const days = Number(req.nextUrl.searchParams.get("days") ?? 30);
   if (!WINDOWS.includes(days)) {
@@ -36,8 +37,9 @@ export async function GET(req: NextRequest) {
        FROM request_logs rl
        JOIN api_keys k ON k.id = rl.api_key_id
       WHERE k.user_id = $1 AND ts > now() - make_interval(days => $2)
+        AND ${ws.org ? "k.org_id = $4" : "k.org_id IS NULL"}
       ORDER BY rl.ts DESC LIMIT $3`,
-    [sess.uid, days, MAX_ROWS]
+    ws.org ? [sess.uid, days, MAX_ROWS, ws.org.orgId] : [sess.uid, days, MAX_ROWS]
   );
 
   const lines = [HEADER.join(",")];

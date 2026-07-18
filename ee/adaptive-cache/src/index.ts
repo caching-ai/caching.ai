@@ -143,10 +143,25 @@ async function recordDecision(
  * Returns the number of settings changed.
  */
 export async function adaptiveSweep(pool: pg.Pool): Promise<number> {
+  // A key tunes when its own mode is 'auto' OR an ENFORCED org policy
+  // (member > department > org) says 'auto' — the same resolution the proxy
+  // request path uses.
   const { rows } = await pool.query<AutoKeyRow>(
-    `SELECT id, anthropic_cache_ttl, openai_cache_retention, keepalive_enabled
-       FROM api_keys
-      WHERE cache_tuning_mode = 'auto' AND revoked_at IS NULL`
+    `SELECT k.id, k.anthropic_cache_ttl, k.openai_cache_retention, k.keepalive_enabled
+       FROM api_keys k
+       JOIN users u ON u.id = k.user_id
+       LEFT JOIN organizations o ON o.id = k.org_id
+       LEFT JOIN org_cache_policies po ON po.org_id = k.org_id AND po.scope = 'org'
+       LEFT JOIN org_cache_policies pd ON pd.org_id = k.org_id AND pd.scope = 'department'
+            AND pd.department_id = u.org_department_id
+       LEFT JOIN org_cache_policies pm ON pm.org_id = k.org_id AND pm.scope = 'member'
+            AND pm.member_user_id = k.user_id
+      WHERE k.revoked_at IS NULL
+        AND (k.org_id IS NULL OR o.deleted_at IS NULL)
+        AND COALESCE(CASE WHEN pm.enforce THEN pm.cache_tuning_mode END,
+                     CASE WHEN pd.enforce THEN pd.cache_tuning_mode END,
+                     CASE WHEN po.enforce THEN po.cache_tuning_mode END,
+                     k.cache_tuning_mode) = 'auto'`
   );
   let changed = 0;
   for (const key of rows) {
@@ -159,9 +174,10 @@ export async function adaptiveSweep(pool: pg.Pool): Promise<number> {
     }
 
     if (rec.anthropic?.confident && rec.anthropic.recommended !== key.anthropic_cache_ttl) {
+      // no tuning-mode guard here: the sweep's selection already resolved the
+      // effective mode (a mid-sweep manual flip loses at most one change)
       await pool.query(
-        `UPDATE api_keys SET anthropic_cache_ttl = $2
-          WHERE id = $1 AND cache_tuning_mode = 'auto'`,
+        `UPDATE api_keys SET anthropic_cache_ttl = $2 WHERE id = $1`,
         [key.id, rec.anthropic.recommended]
       );
       await recordDecision(

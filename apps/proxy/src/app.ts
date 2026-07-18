@@ -44,6 +44,7 @@ import {
   geminiHoldResponse,
 } from "./logic/holdResponse.js";
 import { noteBreakerObservation, injectionPaused } from "./logic/breakerPause.js";
+import { orgBudgetBlocked } from "./logic/orgBudget.js";
 import {
   findApiKey,
   insertRequestLog,
@@ -193,6 +194,24 @@ export function buildApp(deps: AppDeps) {
       return { err: serviceError() };
     }
     if (!key) return { err: authError("This Caching.ai API key is invalid or has been revoked.") };
+    // org workspaces can set hard monthly spend limits (action='block') per
+    // org / department / member — enforced here for every provider path
+    if (key.org_id != null) {
+      const blocked = await orgBudgetBlocked(pool, key);
+      if (blocked) {
+        const who =
+          blocked === "org" ? "your organization" :
+          blocked === "department" ? "your department" : "this member account";
+        return {
+          err: jsonError(
+            "rate_limit_error",
+            `The monthly spend limit set for ${who} in this workspace has been reached. ` +
+              `Ask a workspace admin to raise or remove the limit in the console, or wait for the new month.`,
+            429
+          ),
+        };
+      }
+    }
     return { key };
   }
 

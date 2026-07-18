@@ -1,11 +1,14 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useI18n } from "./I18nProvider";
 
 export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
+  // ?next= only ever navigates within this origin (e.g. back to an invite)
+  const rawNext = useSearchParams().get("next") ?? "";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/console";
   const { dict } = useI18n();
   const t = dict.auth;
   const [email, setEmail] = useState("");
@@ -23,7 +26,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
       body: JSON.stringify({ email, password }),
     });
     if (res.ok) {
-      router.push("/console");
+      router.push(next);
       router.refresh();
     } else {
       const j = await res.json().catch(() => ({}));

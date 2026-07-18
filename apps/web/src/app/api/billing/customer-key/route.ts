@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getWorkspace } from "@/lib/org";
 
-/** stable per-user customerKey for the Toss billing widget */
+/** stable customerKey for the Toss billing widget — per user, or per org in
+ *  the org workspace (admins register the team card) */
 export async function GET() {
-  const sess = await getSession();
-  if (!sess) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  return NextResponse.json({ customerKey: `cai-${sess.uid}` });
+  const ws = await getWorkspace();
+  if (!ws) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  if (ws.org) {
+    if (ws.org.role !== "owner" && ws.org.role !== "admin") {
+      return NextResponse.json({ error: "Workspace admins only." }, { status: 403 });
+    }
+    return NextResponse.json({ customerKey: `cai-org-${ws.org.orgId}` });
+  }
+  return NextResponse.json({ customerKey: `cai-${ws.session.uid}` });
 }

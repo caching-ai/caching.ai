@@ -1,0 +1,1367 @@
+[
+  {
+    "scenario": "S1",
+    "model": "claude-haiku-4-5-20251001",
+    "alias": "haiku",
+    "provider": "anthropic",
+    "arms": {
+      "A": {
+        "calls": 120,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 1231266,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 7628
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.41042200000000006,
+          "min": 0.41042200000000006,
+          "max": 0.41042200000000006
+        },
+        "outputUsd": {
+          "mean": 0.012713333333333332,
+          "min": 0.012674999999999997,
+          "max": 0.01278
+        },
+        "ttftP50": 948.5,
+        "ttftP95": 1715.4499999999998
+      },
+      "B": {
+        "calls": 120,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 292626,
+          "cacheWrite": 23466,
+          "cacheRead": 915174,
+          "output": 7598
+        },
+        "hitRate": 0.743278869066473,
+        "inputSideUsd": {
+          "mean": 0.1378253,
+          "min": 0.1378253,
+          "max": 0.1378253
+        },
+        "outputUsd": {
+          "mean": 0.012663333333333332,
+          "min": 0.01265,
+          "max": 0.012674999999999999
+        },
+        "ttftP50": 864,
+        "ttftP95": 1549.55
+      },
+      "C": {
+        "calls": 120,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 292626,
+          "cacheWrite": 23466,
+          "cacheRead": 915174,
+          "output": 7612
+        },
+        "hitRate": 0.743278869066473,
+        "inputSideUsd": {
+          "mean": 0.1378253,
+          "min": 0.1378253,
+          "max": 0.1378253
+        },
+        "outputUsd": {
+          "mean": 0.012686666666666666,
+          "min": 0.012650000000000002,
+          "max": 0.012719999999999999
+        },
+        "ttftP50": 861.5,
+        "ttftP95": 1339.6,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.1378253,
+          "min": 0.1378253,
+          "max": 0.1378253
+        }
+      }
+    },
+    "savingsVsA": 0.6641863740247842,
+    "savingsVsB": 0
+  },
+  {
+    "scenario": "S1",
+    "model": "claude-sonnet-5",
+    "alias": "sonnet",
+    "provider": "anthropic",
+    "arms": {
+      "A": {
+        "calls": 120,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 1712517,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 15317
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 1.7125170000000007,
+          "min": 1.7125170000000005,
+          "max": 1.7125170000000005
+        },
+        "outputUsd": {
+          "mean": 0.07658500000000001,
+          "min": 0.07623000000000002,
+          "max": 0.07680000000000002
+        },
+        "ttftP50": 1702.5,
+        "ttftP95": 2530.35
+      },
+      "B": {
+        "calls": 120,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 362877,
+          "cacheWrite": 33741,
+          "cacheRead": 1315899,
+          "output": 15320
+        },
+        "hitRate": 0.7684005472646402,
+        "inputSideUsd": {
+          "mean": 0.5366431500000001,
+          "min": 0.5366431500000001,
+          "max": 0.5366431500000001
+        },
+        "outputUsd": {
+          "mean": 0.07660000000000002,
+          "min": 0.07644000000000002,
+          "max": 0.07680000000000002
+        },
+        "ttftP50": 1557,
+        "ttftP95": 2285.7999999999997
+      },
+      "C": {
+        "calls": 120,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 362877,
+          "cacheWrite": 27495,
+          "cacheRead": 1322145,
+          "output": 15299
+        },
+        "hitRate": 0.7720478103283063,
+        "inputSideUsd": {
+          "mean": 0.5294602500000001,
+          "min": 0.5294602500000001,
+          "max": 0.5294602500000001
+        },
+        "outputUsd": {
+          "mean": 0.07649500000000002,
+          "min": 0.07618500000000002,
+          "max": 0.07680000000000002
+        },
+        "ttftP50": 1593,
+        "ttftP95": 3090.8999999999996,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.5294602500000001,
+          "min": 0.5294602500000001,
+          "max": 0.5294602500000001
+        }
+      }
+    },
+    "savingsVsA": 0.6908292005276445,
+    "savingsVsB": 0.013384872237724438
+  },
+  {
+    "scenario": "S2",
+    "model": "gemini-2.5-flash",
+    "alias": "gemini25",
+    "provider": "gemini",
+    "arms": {
+      "A": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 189798,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 2568
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.018979799999999998,
+          "min": 0.018979799999999998,
+          "max": 0.018979799999999998
+        },
+        "outputUsd": {
+          "mean": 0.0021400000000000004,
+          "min": 0.0019050000000000002,
+          "max": 0.0023875000000000003
+        },
+        "ttftP50": 921.5,
+        "ttftP95": 1177.75
+      },
+      "C": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 189798,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 2797
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.018979799999999998,
+          "min": 0.018979799999999998,
+          "max": 0.018979799999999998
+        },
+        "outputUsd": {
+          "mean": 0.0023308333333333336,
+          "min": 0.0022675000000000004,
+          "max": 0.002405
+        },
+        "ttftP50": 827,
+        "ttftP95": 1140.75,
+        "pings": 42,
+        "pingUsd": {
+          "mean": 0.0220206,
+          "min": 0.0220206,
+          "max": 0.0220206
+        },
+        "netUsd": {
+          "mean": 0.0410004,
+          "min": 0.0410004,
+          "max": 0.0410004
+        }
+      }
+    },
+    "savingsVsA": -1.1602124363797301,
+    "savingsVsB": null
+  },
+  {
+    "scenario": "S2",
+    "model": "gpt-4o",
+    "alias": "gpt4o",
+    "provider": "openai",
+    "arms": {
+      "A": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 22968,
+          "cacheWrite": 0,
+          "cacheRead": 164736,
+          "output": 3292
+        },
+        "hitRate": 0.8776371308016878,
+        "inputSideUsd": {
+          "mean": 0.08778000000000001,
+          "min": 0.08778,
+          "max": 0.08778
+        },
+        "outputUsd": {
+          "mean": 0.010973333333333335,
+          "min": 0.01054,
+          "max": 0.011260000000000003
+        },
+        "ttftP50": 527.5,
+        "ttftP95": 1180.25
+      },
+      "C": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 107704,
+          "cacheWrite": 0,
+          "cacheRead": 80000,
+          "output": 3364
+        },
+        "hitRate": 0.42620295784852746,
+        "inputSideUsd": {
+          "mean": 0.12308666666666668,
+          "min": 0.11898,
+          "max": 0.12522
+        },
+        "outputUsd": {
+          "mean": 0.011213333333333334,
+          "min": 0.010840000000000002,
+          "max": 0.011450000000000002
+        },
+        "ttftP50": 646,
+        "ttftP95": 1084.5,
+        "pings": 42,
+        "pingUsd": {
+          "mean": 0.09617500000000001,
+          "min": 0.09409500000000001,
+          "max": 0.10033500000000001
+        },
+        "netUsd": {
+          "mean": 0.2192616666666667,
+          "min": 0.21307500000000001,
+          "max": 0.225555
+        }
+      }
+    },
+    "savingsVsA": -1.4978544846965898,
+    "savingsVsB": null
+  },
+  {
+    "scenario": "S2",
+    "model": "gpt-5.5",
+    "alias": "gpt55",
+    "provider": "openai",
+    "arms": {
+      "A": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 36884,
+          "cacheWrite": 0,
+          "cacheRead": 150784,
+          "output": 3456
+        },
+        "hitRate": 0.8034614318903596,
+        "inputSideUsd": {
+          "mean": 0.021651000000000004,
+          "min": 0.018003000000000005,
+          "max": 0.023475000000000003
+        },
+        "outputUsd": {
+          "mean": 0.011520000000000002,
+          "min": 0.011520000000000002,
+          "max": 0.011520000000000002
+        },
+        "ttftP50": 2305,
+        "ttftP95": 2923.5
+      },
+      "C": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 100116,
+          "cacheWrite": 0,
+          "cacheRead": 87552,
+          "output": 3456
+        },
+        "hitRate": 0.46652599271053136,
+        "inputSideUsd": {
+          "mean": 0.04536300000000001,
+          "min": 0.039891,
+          "max": 0.05083500000000001
+        },
+        "outputUsd": {
+          "mean": 0.011520000000000002,
+          "min": 0.011520000000000002,
+          "max": 0.011520000000000002
+        },
+        "ttftP50": 2054,
+        "ttftP95": 2705,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.04536300000000001,
+          "min": 0.039891,
+          "max": 0.05083500000000001
+        }
+      }
+    },
+    "savingsVsA": -1.0951919079950119,
+    "savingsVsB": null
+  },
+  {
+    "scenario": "S2",
+    "model": "gpt-5.6-sol",
+    "alias": "gpt56",
+    "provider": "openai",
+    "arms": {
+      "A": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 108,
+          "cacheWrite": 187560,
+          "cacheRead": 0,
+          "output": 2611
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.078195,
+          "min": 0.078195,
+          "max": 0.078195
+        },
+        "outputUsd": {
+          "mean": 0.008703333333333334,
+          "min": 0.00852,
+          "max": 0.00899
+        },
+        "ttftP50": 922.5,
+        "ttftP95": 1637
+      },
+      "C": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 108,
+          "cacheWrite": 187560,
+          "cacheRead": 0,
+          "output": 2522
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.078195,
+          "min": 0.078195,
+          "max": 0.078195
+        },
+        "outputUsd": {
+          "mean": 0.008406666666666668,
+          "min": 0.007970000000000001,
+          "max": 0.00885
+        },
+        "ttftP50": 956.5,
+        "ttftP95": 1973.25,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.078195,
+          "min": 0.078195,
+          "max": 0.078195
+        }
+      }
+    },
+    "savingsVsA": 0,
+    "savingsVsB": null
+  },
+  {
+    "scenario": "S2",
+    "model": "claude-haiku-4-5-20251001",
+    "alias": "haiku",
+    "provider": "anthropic",
+    "arms": {
+      "A": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 215979,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 3456
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.071993,
+          "min": 0.071993,
+          "max": 0.071993
+        },
+        "outputUsd": {
+          "mean": 0.005760000000000001,
+          "min": 0.005760000000000001,
+          "max": 0.005760000000000001
+        },
+        "ttftP50": 886.5,
+        "ttftP95": 1539.25
+      },
+      "B": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 1311,
+          "cacheWrite": 214668,
+          "cacheRead": 0,
+          "output": 3456
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.089882,
+          "min": 0.089882,
+          "max": 0.089882
+        },
+        "outputUsd": {
+          "mean": 0.005760000000000001,
+          "min": 0.005760000000000001,
+          "max": 0.005760000000000001
+        },
+        "ttftP50": 933,
+        "ttftP95": 1558.25
+      },
+      "C": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 1311,
+          "cacheWrite": 17889,
+          "cacheRead": 196779,
+          "output": 3456
+        },
+        "hitRate": 0.9111024682955288,
+        "inputSideUsd": {
+          "mean": 0.01445005,
+          "min": 0.01445005,
+          "max": 0.01445005
+        },
+        "outputUsd": {
+          "mean": 0.005760000000000001,
+          "min": 0.005760000000000001,
+          "max": 0.005760000000000001
+        },
+        "ttftP50": 888,
+        "ttftP95": 2233.25,
+        "pings": 47,
+        "pingUsd": {
+          "mean": 0.009530033333333333,
+          "min": 0.0091245,
+          "max": 0.0097328
+        },
+        "netUsd": {
+          "mean": 0.023980083333333332,
+          "min": 0.02357455,
+          "max": 0.02418285
+        }
+      }
+    },
+    "savingsVsA": 0.6669109033748651,
+    "savingsVsB": 0.7332048315198446
+  },
+  {
+    "scenario": "S2",
+    "model": "claude-sonnet-5",
+    "alias": "sonnet",
+    "provider": "anthropic",
+    "arms": {
+      "A": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 315084,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 3456
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.3150840000000001,
+          "min": 0.3150840000000001,
+          "max": 0.3150840000000001
+        },
+        "outputUsd": {
+          "mean": 0.01728,
+          "min": 0.01728,
+          "max": 0.01728
+        },
+        "ttftP50": 1451,
+        "ttftP95": 2122.75
+      },
+      "B": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 1668,
+          "cacheWrite": 313416,
+          "cacheRead": 0,
+          "output": 3456
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.393438,
+          "min": 0.393438,
+          "max": 0.393438
+        },
+        "outputUsd": {
+          "mean": 0.01728,
+          "min": 0.01728,
+          "max": 0.01728
+        },
+        "ttftP50": 1543.5,
+        "ttftP95": 3721
+      },
+      "C": {
+        "calls": 36,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 1668,
+          "cacheWrite": 26118,
+          "cacheRead": 287298,
+          "output": 3456
+        },
+        "hitRate": 0.9118139924591537,
+        "inputSideUsd": {
+          "mean": 0.06304530000000003,
+          "min": 0.06304530000000003,
+          "max": 0.06304530000000003
+        },
+        "outputUsd": {
+          "mean": 0.01728,
+          "min": 0.01728,
+          "max": 0.01728
+        },
+        "ttftP50": 1467,
+        "ttftP95": 2417,
+        "pings": 43,
+        "pingUsd": {
+          "mean": 0.037865800000000005,
+          "min": 0.0369852,
+          "max": 0.039627
+        },
+        "netUsd": {
+          "mean": 0.10091110000000003,
+          "min": 0.10003050000000002,
+          "max": 0.10267230000000002
+        }
+      }
+    },
+    "savingsVsA": 0.6797327061989819,
+    "savingsVsB": 0.7435146071299671
+  },
+  {
+    "scenario": "S3",
+    "model": "claude-haiku-4-5-20251001",
+    "alias": "haiku",
+    "provider": "anthropic",
+    "arms": {
+      "A": {
+        "calls": 90,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 470799,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 8640
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.15693299999999993,
+          "min": 0.15693299999999993,
+          "max": 0.15693299999999993
+        },
+        "outputUsd": {
+          "mean": 0.014399999999999996,
+          "min": 0.014399999999999996,
+          "max": 0.014399999999999996
+        },
+        "ttftP50": 909.5,
+        "ttftP95": 1816.799999999999
+      },
+      "B": {
+        "calls": 90,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 3069,
+          "cacheWrite": 467730,
+          "cacheRead": 0,
+          "output": 8640
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.1959104999999999,
+          "min": 0.1959104999999999,
+          "max": 0.1959104999999999
+        },
+        "outputUsd": {
+          "mean": 0.014399999999999996,
+          "min": 0.014399999999999996,
+          "max": 0.014399999999999996
+        },
+        "ttftP50": 876,
+        "ttftP95": 1821.1999999999994
+      },
+      "C": {
+        "calls": 90,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 3069,
+          "cacheWrite": 467730,
+          "cacheRead": 0,
+          "output": 8640
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.1959104999999999,
+          "min": 0.1959104999999999,
+          "max": 0.1959104999999999
+        },
+        "outputUsd": {
+          "mean": 0.014399999999999996,
+          "min": 0.014399999999999996,
+          "max": 0.014399999999999996
+        },
+        "ttftP50": 866.5,
+        "ttftP95": 1565.1499999999999,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.1959104999999999,
+          "min": 0.1959104999999999,
+          "max": 0.1959104999999999
+        }
+      }
+    },
+    "savingsVsA": -0.24837032364129907,
+    "savingsVsB": 0
+  },
+  {
+    "scenario": "S4",
+    "model": "gpt-4o",
+    "alias": "gpt4o",
+    "provider": "openai",
+    "arms": {
+      "A": {
+        "calls": 900,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 221302,
+          "cacheWrite": 0,
+          "cacheRead": 3976832,
+          "output": 2769
+        },
+        "hitRate": 0.9472856273763534,
+        "inputSideUsd": {
+          "mean": 1.8414316666666657,
+          "min": 1.831404999999999,
+          "max": 1.8520449999999986
+        },
+        "outputUsd": {
+          "mean": 0.009229999999999983,
+          "min": 0.00902999999999998,
+          "max": 0.009409999999999988
+        },
+        "ttftP50": 456,
+        "ttftP95": 732.05
+      },
+      "C": {
+        "calls": 900,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 281206,
+          "cacheWrite": 0,
+          "cacheRead": 3916928,
+          "output": 2819
+        },
+        "hitRate": 0.9330164306332289,
+        "inputSideUsd": {
+          "mean": 1.8663916666666653,
+          "min": 1.8568449999999987,
+          "max": 1.8781249999999987
+        },
+        "outputUsd": {
+          "mean": 0.009396666666666657,
+          "min": 0.009339999999999989,
+          "max": 0.009479999999999994
+        },
+        "ttftP50": 527,
+        "ttftP95": 838.6499999999994,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 1.8663916666666653,
+          "min": 1.8568449999999987,
+          "max": 1.8781249999999987
+        }
+      }
+    },
+    "savingsVsA": -0.01355467077699489,
+    "savingsVsB": null
+  },
+  {
+    "scenario": "S4",
+    "model": "gpt-5.6-sol",
+    "alias": "gpt56",
+    "provider": "openai",
+    "arms": {
+      "A": {
+        "calls": 900,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 2700,
+          "cacheWrite": 4194534,
+          "cacheRead": 0,
+          "output": 5400
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 1.7488475000000008,
+          "min": 1.7488475000000006,
+          "max": 1.7488475000000006
+        },
+        "outputUsd": {
+          "mean": 0.017999999999999964,
+          "min": 0.017999999999999964,
+          "max": 0.017999999999999964
+        },
+        "ttftP50": 819,
+        "ttftP95": 1544.1499999999999
+      },
+      "C": {
+        "calls": 900,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 2700,
+          "cacheWrite": 4194534,
+          "cacheRead": 0,
+          "output": 5400
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 1.7488475000000008,
+          "min": 1.7488475000000006,
+          "max": 1.7488475000000006
+        },
+        "outputUsd": {
+          "mean": 0.017999999999999964,
+          "min": 0.017999999999999964,
+          "max": 0.017999999999999964
+        },
+        "ttftP50": 945,
+        "ttftP95": 1794.6999999999994,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 1.7488475000000008,
+          "min": 1.7488475000000006,
+          "max": 1.7488475000000006
+        }
+      }
+    },
+    "savingsVsA": 0,
+    "savingsVsB": null
+  },
+  {
+    "scenario": "S4",
+    "model": "grok-4.5",
+    "alias": "grok4",
+    "provider": "grok",
+    "arms": {
+      "A": {
+        "calls": 450,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 564930,
+          "cacheWrite": 0,
+          "cacheRead": 1648512,
+          "output": 591992
+        },
+        "hitRate": 0.7447730728882889,
+        "inputSideUsd": {
+          "mean": 0.9770579999999999,
+          "min": 0.9557459999999997,
+          "max": 0.9983699999999999
+        },
+        "outputUsd": {
+          "mean": 2.9599599999999993,
+          "min": 2.9284949999999994,
+          "max": 3.000014999999999
+        },
+        "ttftP50": 688,
+        "ttftP95": 1203.4499999999991
+      },
+      "C": {
+        "calls": 450,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 579906,
+          "cacheWrite": 0,
+          "cacheRead": 1633536,
+          "output": 604660
+        },
+        "hitRate": 0.7380071400108971,
+        "inputSideUsd": {
+          "mean": 0.9882899999999998,
+          "min": 0.9560339999999998,
+          "max": 1.020546
+        },
+        "outputUsd": {
+          "mean": 3.0233000000000008,
+          "min": 2.891655000000002,
+          "max": 3.154050000000001
+        },
+        "ttftP50": 725.5,
+        "ttftP95": 1504.3499999999992,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.9882899999999998,
+          "min": 0.9560339999999998,
+          "max": 1.020546
+        }
+      }
+    },
+    "savingsVsA": -0.011495735155947661,
+    "savingsVsB": null
+  },
+  {
+    "scenario": "S4",
+    "model": "claude-haiku-4-5-20251001",
+    "alias": "haiku",
+    "provider": "anthropic",
+    "arms": {
+      "A": {
+        "calls": 900,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 5180382,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 6300
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 1.726794,
+          "min": 1.726794,
+          "max": 1.726794
+        },
+        "outputUsd": {
+          "mean": 0.010500000000000053,
+          "min": 0.010500000000000053,
+          "max": 0.010500000000000053
+        },
+        "ttftP50": 871.5,
+        "ttftP95": 1717.3499999999997
+      },
+      "B": {
+        "calls": 900,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 25182,
+          "cacheWrite": 17184,
+          "cacheRead": 5138016,
+          "output": 6300
+        },
+        "hitRate": 0.9918218386211674,
+        "inputSideUsd": {
+          "mean": 0.18682120000000058,
+          "min": 0.18682120000000058,
+          "max": 0.18682120000000058
+        },
+        "outputUsd": {
+          "mean": 0.010500000000000053,
+          "min": 0.010500000000000053,
+          "max": 0.010500000000000053
+        },
+        "ttftP50": 745.5,
+        "ttftP95": 1656.1999999999998
+      },
+      "C": {
+        "calls": 900,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 25182,
+          "cacheWrite": 17184,
+          "cacheRead": 5138016,
+          "output": 6300
+        },
+        "hitRate": 0.9918218386211674,
+        "inputSideUsd": {
+          "mean": 0.18682120000000058,
+          "min": 0.18682120000000058,
+          "max": 0.18682120000000058
+        },
+        "outputUsd": {
+          "mean": 0.010500000000000053,
+          "min": 0.010500000000000053,
+          "max": 0.010500000000000053
+        },
+        "ttftP50": 884,
+        "ttftP95": 1618.099999999999,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.18682120000000058,
+          "min": 0.18682120000000058,
+          "max": 0.18682120000000058
+        }
+      }
+    },
+    "savingsVsA": 0.8918103722852867,
+    "savingsVsB": 0
+  },
+  {
+    "scenario": "S5",
+    "model": "claude-haiku-4-5-20251001",
+    "alias": "haiku",
+    "provider": "anthropic",
+    "arms": {
+      "A": {
+        "calls": 6,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 51165,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 813
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.017055,
+          "min": 0.017055,
+          "max": 0.017055
+        },
+        "outputUsd": {
+          "mean": 0.0013550000000000003,
+          "min": 0.0012950000000000001,
+          "max": 0.00142
+        },
+        "ttftP50": 1318,
+        "ttftP95": 1706
+      },
+      "B": {
+        "calls": 6,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 183,
+          "cacheWrite": 50982,
+          "cacheRead": 0,
+          "output": 790
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.021303499999999993,
+          "min": 0.021303499999999996,
+          "max": 0.021303499999999996
+        },
+        "outputUsd": {
+          "mean": 0.0013166666666666667,
+          "min": 0.0012950000000000001,
+          "max": 0.001355
+        },
+        "ttftP50": 963,
+        "ttftP95": 1259.5
+      },
+      "C": {
+        "calls": 6,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 183,
+          "cacheWrite": 25491,
+          "cacheRead": 25491,
+          "output": 782
+        },
+        "hitRate": 0.49821166813251244,
+        "inputSideUsd": {
+          "mean": 0.01153195,
+          "min": 0.01153195,
+          "max": 0.01153195
+        },
+        "outputUsd": {
+          "mean": 0.0013033333333333334,
+          "min": 0.0013,
+          "max": 0.0013050000000000002
+        },
+        "ttftP50": 702.5,
+        "ttftP95": 1283.25,
+        "pings": 33,
+        "pingUsd": {
+          "mean": 0.0094787,
+          "min": 0.0094787,
+          "max": 0.0094787
+        },
+        "netUsd": {
+          "mean": 0.021010650000000002,
+          "min": 0.02101065,
+          "max": 0.02101065
+        }
+      }
+    },
+    "savingsVsA": -0.23193491644678987,
+    "savingsVsB": 0.013746567465439502
+  },
+  {
+    "scenario": "S6",
+    "model": "gemini-2.5-flash",
+    "alias": "gemini25",
+    "provider": "gemini",
+    "arms": {
+      "A": {
+        "calls": 180,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 747188,
+          "cacheWrite": 0,
+          "cacheRead": 77596,
+          "output": 9452
+        },
+        "hitRate": 0.09408038953228967,
+        "inputSideUsd": {
+          "mean": 0.07665869999999997,
+          "min": 0.07420829999999998,
+          "max": 0.07788389999999996
+        },
+        "outputUsd": {
+          "mean": 0.007876666666666672,
+          "min": 0.006580000000000004,
+          "max": 0.00882000000000001
+        },
+        "ttftP50": 917.5,
+        "ttftP95": 1205.9499999999996
+      },
+      "C": {
+        "calls": 180,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 747188,
+          "cacheWrite": 0,
+          "cacheRead": 77596,
+          "output": 8968
+        },
+        "hitRate": 0.09408038953228967,
+        "inputSideUsd": {
+          "mean": 0.07665869999999997,
+          "min": 0.07328939999999998,
+          "max": 0.07972169999999996
+        },
+        "outputUsd": {
+          "mean": 0.007473333333333341,
+          "min": 0.006862500000000008,
+          "max": 0.00802500000000001
+        },
+        "ttftP50": 838.5,
+        "ttftP95": 1143.0499999999997,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.07665869999999997,
+          "min": 0.07328939999999998,
+          "max": 0.07972169999999996
+        }
+      }
+    },
+    "savingsVsA": 0,
+    "savingsVsB": null
+  },
+  {
+    "scenario": "S6",
+    "model": "gpt-5.6-sol",
+    "alias": "gpt56",
+    "provider": "openai",
+    "arms": {
+      "A": {
+        "calls": 180,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 540,
+          "cacheWrite": 813492,
+          "cacheRead": 0,
+          "output": 8424
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.3391800000000002,
+          "min": 0.3391800000000002,
+          "max": 0.3391800000000002
+        },
+        "outputUsd": {
+          "mean": 0.028080000000000008,
+          "min": 0.027910000000000015,
+          "max": 0.02818
+        },
+        "ttftP50": 941.5,
+        "ttftP95": 1676.2499999999993
+      },
+      "C": {
+        "calls": 180,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 540,
+          "cacheWrite": 813492,
+          "cacheRead": 0,
+          "output": 8128
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.3391800000000002,
+          "min": 0.3391800000000002,
+          "max": 0.3391800000000002
+        },
+        "outputUsd": {
+          "mean": 0.027093333333333344,
+          "min": 0.026680000000000013,
+          "max": 0.02736000000000001
+        },
+        "ttftP50": 1063,
+        "ttftP95": 2249.899999999997,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.3391800000000002,
+          "min": 0.3391800000000002,
+          "max": 0.3391800000000002
+        }
+      }
+    },
+    "savingsVsA": 0,
+    "savingsVsB": null
+  },
+  {
+    "scenario": "S6",
+    "model": "claude-haiku-4-5-20251001",
+    "alias": "haiku",
+    "provider": "anthropic",
+    "arms": {
+      "A": {
+        "calls": 180,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 936939,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 11520
+        },
+        "hitRate": 0,
+        "inputSideUsd": {
+          "mean": 0.31231299999999984,
+          "min": 0.31231299999999984,
+          "max": 0.31231299999999984
+        },
+        "outputUsd": {
+          "mean": 0.01920000000000003,
+          "min": 0.01920000000000003,
+          "max": 0.01920000000000003
+        },
+        "ttftP50": 885,
+        "ttftP95": 1555.9999999999993
+      },
+      "B": {
+        "calls": 180,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 5079,
+          "cacheWrite": 15531,
+          "cacheRead": 916329,
+          "output": 11520
+        },
+        "hitRate": 0.9780028368975995,
+        "inputSideUsd": {
+          "mean": 0.038708550000000015,
+          "min": 0.038708550000000015,
+          "max": 0.038708550000000015
+        },
+        "outputUsd": {
+          "mean": 0.01920000000000003,
+          "min": 0.01920000000000003,
+          "max": 0.01920000000000003
+        },
+        "ttftP50": 863,
+        "ttftP95": 1433.2499999999975
+      },
+      "C": {
+        "calls": 180,
+        "errors": 0,
+        "retries": 0,
+        "tokens": {
+          "input": 5079,
+          "cacheWrite": 15531,
+          "cacheRead": 916329,
+          "output": 11520
+        },
+        "hitRate": 0.9780028368975995,
+        "inputSideUsd": {
+          "mean": 0.038708550000000015,
+          "min": 0.038708550000000015,
+          "max": 0.038708550000000015
+        },
+        "outputUsd": {
+          "mean": 0.01920000000000003,
+          "min": 0.01920000000000003,
+          "max": 0.01920000000000003
+        },
+        "ttftP50": 808,
+        "ttftP95": 1657.1499999999976,
+        "pings": 0,
+        "pingUsd": {
+          "mean": 0,
+          "min": 0,
+          "max": 0
+        },
+        "netUsd": {
+          "mean": 0.038708550000000015,
+          "min": 0.038708550000000015,
+          "max": 0.038708550000000015
+        }
+      }
+    },
+    "savingsVsA": 0.8760584733904768,
+    "savingsVsB": 0
+  }
+]

@@ -205,25 +205,29 @@ function Snippet({ proxyUrl, plaintext }: { proxyUrl: string; plaintext: string 
   );
 }
 
-/** account-level provider keys — register once, every ck_ key uses them */
-function AccountProviderKeys() {
+/** account-level provider keys — register once, every ck_ key uses them.
+ *  In the org workspace this section manages the TEAM provider keys
+ *  (admins edit; members see which providers are connected + a note). */
+function AccountProviderKeys({ orgWs = false, canEdit = true }: { orgWs?: boolean; canEdit?: boolean }) {
   const { dict } = useI18n();
   const { confirm } = useConfirm();
   const t = dict.console.keys;
+  const tw = dict.console.ws;
   const tips = dict.console.tips;
   const [registered, setRegistered] = useState<Record<string, string>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
+  const endpoint = orgWs ? "/api/org/provider-keys" : "/api/provider-keys";
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/provider-keys");
+    const r = await fetch(endpoint);
     if (r.ok) setRegistered((await r.json()).registered ?? {});
-  }, []);
+  }, [endpoint]);
   useEffect(() => { void load(); }, [load]);
 
   async function save(provider: string, body: object) {
     setMessage("");
-    const r = await fetch("/api/provider-keys", {
+    const r = await fetch(endpoint, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ provider, ...body }),
@@ -232,13 +236,29 @@ function AccountProviderKeys() {
     await load();
   }
 
+  if (orgWs && !canEdit) {
+    return (
+      <section id="provider-keys" className="card scroll-mt-6" data-testid="account-provider-keys">
+        <h2 className="text-[20px] font-medium text-ink">{tw.teamProviderSection}</h2>
+        <p className="mt-1 text-[15px] text-body-mid">{tw.memberProviderNote}</p>
+        <ul className="mt-4 flex flex-wrap gap-2">
+          {Object.keys(registered).map((p) => (
+            <li key={p} className="rounded bg-accent-green/10 px-2.5 py-1 text-badge uppercase tracking-wide text-accent-green">
+              {p} ✓
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
+
   return (
     <section id="provider-keys" className="card scroll-mt-6" data-testid="account-provider-keys">
       <h2 className="flex items-center text-[20px] font-medium text-ink">
-        {t.providerSection}
+        {orgWs ? tw.teamProviderSection : t.providerSection}
         <Tip text={tips.providerKeys} />
       </h2>
-      <p className="mt-1 text-[15px] text-body-mid">{t.providerSectionSub}</p>
+      <p className="mt-1 text-[15px] text-body-mid">{orgWs ? tw.teamProviderSub : t.providerSectionSub}</p>
       {message && <p className="mt-3 text-[15px] text-error">{message}</p>}
       <div className="mt-6 flex flex-col gap-6">
         {PROVIDERS.map((p) => (
@@ -297,6 +317,20 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
   const [message, setMessage] = useState("");
   const [cloud, setCloud] = useState(false);
   const [recs, setRecs] = useState<Record<number, KeyRec>>({});
+  const [orgWs, setOrgWs] = useState(false);
+  const [orgAdmin, setOrgAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/org")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j?.active === "org") {
+          setOrgWs(true);
+          setOrgAdmin(j.org?.role === "owner" || j.org?.role === "admin");
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     const r = await fetch("/api/keys");
@@ -438,7 +472,7 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
         </div>
       )}
 
-      <AccountProviderKeys />
+      <AccountProviderKeys orgWs={orgWs} canEdit={!orgWs || orgAdmin} />
 
       {!loaded ? (
         <p className="text-mute text-[16px]">{t.loading}</p>

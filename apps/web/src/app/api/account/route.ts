@@ -17,9 +17,25 @@ export async function DELETE() {
   const sess = await getSession();
   if (!sess) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
 
+  // a workspace owner must delete (or hand off) the workspace first — the org
+  // and its billing history can't be left ownerless
+  const owner = await db().query(
+    `SELECT 1 FROM organizations WHERE owner_user_id=$1 AND deleted_at IS NULL`, [sess.uid]);
+  if (owner.rows[0]) {
+    return NextResponse.json(
+      { error: "You own a team workspace. Delete it in the workspace settings first." },
+      { status: 409 }
+    );
+  }
+
   const client = await db().connect();
   try {
     await client.query("BEGIN");
+    // leave the org (if any): org keys are revoked below with the rest
+    await client.query(
+      "UPDATE users SET org_id=NULL, org_role=NULL, org_department_id=NULL, org_joined_at=NULL WHERE id=$1",
+      [sess.uid]
+    );
     await client.query(
       `DELETE FROM keepalive_state ks USING api_keys k
         WHERE ks.api_key_id = k.id AND k.user_id = $1`,

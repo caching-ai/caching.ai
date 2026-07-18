@@ -199,6 +199,7 @@ export async function weeklyStatsFor(pool: pg.Pool, sinceDays = 7): Promise<Week
        JOIN users u ON u.id = k.user_id
       WHERE rl.ts > now() - ($1 || ' days')::interval
         AND u.report_opt_out = false
+        AND k.org_id IS NULL
       GROUP BY u.id, u.email, u.locale
      HAVING count(*) FILTER (WHERE NOT rl.is_keepalive) > 0`,
     [sinceDays]

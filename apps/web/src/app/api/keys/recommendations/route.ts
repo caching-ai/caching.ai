@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getWorkspace } from "@/lib/org";
 import { recommendForKey, type KeyRecommendation } from "@caching/ee-adaptive";
 
 interface Decision {
@@ -16,17 +16,19 @@ interface Decision {
  * one call for all of the user's keys, so the keys page never fans out.
  */
 export async function GET() {
-  const sess = await getSession();
-  if (!sess) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const ws = await getWorkspace();
+  if (!ws) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const sess = ws.session;
   if (process.env.CACHING_CLOUD !== "1") {
     return NextResponse.json({ cloud: false, recs: {} });
   }
 
   const { rows: keys } = await db().query<{ id: number; keepalive_enabled: boolean }>(
     `SELECT id, keepalive_enabled FROM api_keys
-      WHERE user_id=$1 AND revoked_at IS NULL AND auto_cache_control = true
+      WHERE user_id=$1 AND ${ws.org ? "org_id = $2" : "org_id IS NULL"}
+        AND revoked_at IS NULL AND auto_cache_control = true
       ORDER BY id DESC LIMIT 25`,
-    [sess.uid]
+    ws.org ? [sess.uid, ws.org.orgId] : [sess.uid]
   );
 
   const recs: Record<number, KeyRecommendation & { lastDecision?: Decision }> = {};

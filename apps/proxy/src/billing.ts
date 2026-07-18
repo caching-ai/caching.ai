@@ -25,18 +25,61 @@ export async function billingSweep(
   // logged after its final in-month sweep are included before collection —
   // the charge sweep leaves a one-day grace window for exactly this.
   let count = await sweepMonth(pool, now, live);
+  count += await sweepMonthOrg(pool, now, live);
   if (now.getUTCDate() === 1) {
     const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
     count += await sweepMonth(pool, prev, live);
+    count += await sweepMonthOrg(pool, prev, live);
   }
   return count;
 }
 
-async function sweepMonth(pool: pg.Pool, now: Date, live: boolean): Promise<number> {
+function monthBounds(now: Date): { startStr: string; endStr: string } {
   const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
-  const startStr = periodStart.toISOString().slice(0, 10);
-  const endStr = periodEnd.toISOString().slice(0, 10);
+  return { startStr: periodStart.toISOString().slice(0, 10), endStr: periodEnd.toISOString().slice(0, 10) };
+}
+
+/** Org workspaces meter the same performance fee, into their OWN periods —
+ *  org keys never appear in personal billing and vice versa. */
+async function sweepMonthOrg(pool: pg.Pool, now: Date, live: boolean): Promise<number> {
+  const { startStr, endStr } = monthBounds(now);
+  const { rowCount } = await pool.query(
+    `INSERT INTO org_billing_periods
+       (org_id, period_start, period_end, gross_saved_usd, keepalive_cost_usd,
+        net_saved_usd, fee_usd, fee_rate, status, computed_at)
+     SELECT k.org_id, $1::date, $2::date,
+            COALESCE(sum(rl.saved_usd) FILTER (WHERE NOT rl.is_keepalive), 0),
+            COALESCE(sum(rl.cost_usd) FILTER (WHERE rl.is_keepalive), 0),
+            COALESCE(sum(rl.saved_usd) FILTER (WHERE NOT rl.is_keepalive), 0)
+              - COALESCE(sum(rl.cost_usd) FILTER (WHERE rl.is_keepalive), 0),
+            GREATEST(0,
+              COALESCE(sum(rl.saved_usd) FILTER (WHERE NOT rl.is_keepalive), 0)
+                - COALESCE(sum(rl.cost_usd) FILTER (WHERE rl.is_keepalive), 0)
+            ) * $3,
+            $3, $4, now()
+       FROM request_logs rl
+       JOIN api_keys k ON k.id = rl.api_key_id
+      WHERE k.org_id IS NOT NULL
+        AND rl.ts >= $1::date AND rl.ts < ($2::date + 1)
+      GROUP BY k.org_id
+     ON CONFLICT (org_id, period_start) DO UPDATE SET
+        period_end = EXCLUDED.period_end,
+        gross_saved_usd = EXCLUDED.gross_saved_usd,
+        keepalive_cost_usd = EXCLUDED.keepalive_cost_usd,
+        net_saved_usd = EXCLUDED.net_saved_usd,
+        fee_usd = EXCLUDED.fee_usd,
+        fee_rate = EXCLUDED.fee_rate,
+        status = CASE WHEN org_billing_periods.status IN ('beta_waived', 'accruing')
+                      THEN EXCLUDED.status ELSE org_billing_periods.status END,
+        computed_at = now()`,
+    [startStr, endStr, FEE_RATE, live ? "accruing" : "beta_waived"]
+  );
+  return rowCount ?? 0;
+}
+
+async function sweepMonth(pool: pg.Pool, now: Date, live: boolean): Promise<number> {
+  const { startStr, endStr } = monthBounds(now);
 
   const { rowCount } = await pool.query(
     `INSERT INTO billing_periods
@@ -54,7 +97,8 @@ async function sweepMonth(pool: pg.Pool, now: Date, live: boolean): Promise<numb
             $3, $4, now()
        FROM request_logs rl
        JOIN api_keys k ON k.id = rl.api_key_id
-      WHERE rl.ts >= $1::date AND rl.ts < ($2::date + 1)
+      WHERE k.org_id IS NULL
+        AND rl.ts >= $1::date AND rl.ts < ($2::date + 1)
       GROUP BY k.user_id
      ON CONFLICT (user_id, period_start) DO UPDATE SET
         period_end = EXCLUDED.period_end,

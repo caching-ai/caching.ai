@@ -46,6 +46,8 @@ export interface KeepaliveDeps {
 
 interface Candidate {
   api_key_id: number;
+  org_id: number | null;
+  prefix_sha: string | null;
   model: string;
   encrypted_prefix: string;
   anthropic_key_encrypted: string | null;
@@ -104,19 +106,43 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
   const doFetch = deps.fetchImpl ?? fetch;
   const now = deps.now ? deps.now() : Date.now();
 
+  // Effective settings come from the same policy resolution as the request
+  // path (enforced org policies override key settings); org keys use the org
+  // provider key and answer to the ORG's billing lock, never the member's.
   const { rows } = await pool.query<Candidate>(
-    `SELECT ks.api_key_id, ks.model, ks.encrypted_prefix, ks.last_request_at, ks.last_ping_at,
+    `SELECT ks.api_key_id, k.org_id, ks.prefix_sha, ks.model, ks.encrypted_prefix,
+            ks.last_request_at, ks.last_ping_at,
             ks.last_1h_write_at, ks.pings_today, ks.spend_today_usd,
             to_char(ks.spend_day, 'YYYY-MM-DD') AS spend_day,
-            COALESCE(k.anthropic_key_encrypted, ua.key_encrypted) AS anthropic_key_encrypted,
-            k.keepalive_budget_usd_daily, k.anthropic_cache_ttl,
+            COALESCE(k.anthropic_key_encrypted,
+                     CASE WHEN k.org_id IS NULL THEN ua.key_encrypted ELSE oa.key_encrypted END)
+              AS anthropic_key_encrypted,
+            COALESCE(CASE WHEN pm.enforce THEN pm.keepalive_budget_usd_daily END,
+                     CASE WHEN pd.enforce THEN pd.keepalive_budget_usd_daily END,
+                     CASE WHEN po.enforce THEN po.keepalive_budget_usd_daily END,
+                     k.keepalive_budget_usd_daily) AS keepalive_budget_usd_daily,
+            COALESCE(CASE WHEN pm.enforce THEN pm.anthropic_cache_ttl END,
+                     CASE WHEN pd.enforce THEN pd.anthropic_cache_ttl END,
+                     CASE WHEN po.enforce THEN po.anthropic_cache_ttl END,
+                     k.anthropic_cache_ttl) AS anthropic_cache_ttl,
             k.keepalive_hold_until
        FROM keepalive_state ks
        JOIN api_keys k ON k.id = ks.api_key_id
        JOIN users u ON u.id = k.user_id
+       LEFT JOIN organizations org ON org.id = k.org_id
        LEFT JOIN user_provider_keys ua ON ua.user_id = k.user_id AND ua.provider = 'anthropic'
-      WHERE k.keepalive_enabled = true
-        AND u.billing_locked = false
+       LEFT JOIN org_provider_keys oa ON oa.org_id = k.org_id AND oa.provider = 'anthropic'
+       LEFT JOIN org_cache_policies po ON po.org_id = k.org_id AND po.scope = 'org'
+       LEFT JOIN org_cache_policies pd ON pd.org_id = k.org_id AND pd.scope = 'department'
+            AND pd.department_id = u.org_department_id
+       LEFT JOIN org_cache_policies pm ON pm.org_id = k.org_id AND pm.scope = 'member'
+            AND pm.member_user_id = k.user_id
+      WHERE COALESCE(CASE WHEN pm.enforce THEN pm.keepalive_enabled END,
+                     CASE WHEN pd.enforce THEN pd.keepalive_enabled END,
+                     CASE WHEN po.enforce THEN po.keepalive_enabled END,
+                     k.keepalive_enabled) = true
+        AND ((k.org_id IS NULL AND u.billing_locked = false)
+          OR (k.org_id IS NOT NULL AND org.billing_locked = false AND org.deleted_at IS NULL))
         AND k.revoked_at IS NULL
         AND ks.provider = 'anthropic'
         AND ks.encrypted_prefix IS NOT NULL
@@ -133,8 +159,37 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
     keySpend.set(row.api_key_id, (keySpend.get(row.api_key_id) ?? 0) + spent);
   }
 
+  // Shared-warming dedupe: inside an org, candidates with the same provider
+  // key row and the same prefix hash point at the SAME provider cache entry —
+  // one ping warms it for every member. Keep one candidate per group: a held
+  // one if any (so warm holds survive dedupe), else the most recently active.
+  const chosen = new Map<string, Candidate>();
+  const dropped = new Set<Candidate>();
+  for (const row of rows) {
+    if (row.org_id == null || !row.prefix_sha || !row.anthropic_key_encrypted) continue;
+    const groupKey = `${row.org_id}:${row.anthropic_key_encrypted}:${row.prefix_sha}`;
+    const cur = chosen.get(groupKey);
+    if (!cur) {
+      chosen.set(groupKey, row);
+      continue;
+    }
+    const held = (r: Candidate) =>
+      r.keepalive_hold_until && new Date(r.keepalive_hold_until).getTime() > now;
+    const better =
+      (held(row) && !held(cur)) ||
+      (held(row) === held(cur) &&
+        new Date(row.last_request_at).getTime() > new Date(cur.last_request_at).getTime());
+    if (better) {
+      dropped.add(cur);
+      chosen.set(groupKey, row);
+    } else {
+      dropped.add(row);
+    }
+  }
+
   let pinged = 0;
   for (const row of rows) {
+    if (dropped.has(row)) continue;
     const lastReq = new Date(row.last_request_at).getTime();
     const sinceReq = now - lastReq;
     const holdUntil = row.keepalive_hold_until ? new Date(row.keepalive_hold_until).getTime() : 0;

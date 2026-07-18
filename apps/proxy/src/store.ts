@@ -6,6 +6,10 @@ import { recordRequestMetric } from "./metrics.js";
 export interface ApiKeyRow {
   id: number;
   user_id: number;
+  /** NULL for personal keys; set = the key belongs to the org workspace */
+  org_id: number | null;
+  /** the key owner's department (org keys only) — budget scope resolution */
+  org_department_id: number | null;
   billing_locked: boolean;
   anthropic_key_encrypted: string | null;
   openai_key_encrypted: string | null;
@@ -18,20 +22,56 @@ export interface ApiKeyRow {
   openai_cache_retention: "default" | "24h";
 }
 
-// Provider keys resolve per-key override first, then the account default
-// (user_provider_keys) — users register a provider key once and every ck_ key
-// they mint uses it, unless a key pins its own.
+// Provider keys resolve per-key override first, then the workspace default:
+// user_provider_keys for personal keys, org_provider_keys for org keys —
+// never across (strict personal/org separation). The shared org provider
+// account is also what makes caches shared inside an org.
 const PROVIDER_KEY_FALLBACK = `
-  COALESCE(k.anthropic_key_encrypted, ua.key_encrypted) AS anthropic_key_encrypted,
-  COALESCE(k.openai_key_encrypted,   uo.key_encrypted) AS openai_key_encrypted,
-  COALESCE(k.gemini_key_encrypted,   ug.key_encrypted) AS gemini_key_encrypted,
-  COALESCE(k.grok_key_encrypted,     ux.key_encrypted) AS grok_key_encrypted`;
+  COALESCE(k.anthropic_key_encrypted, CASE WHEN k.org_id IS NULL THEN ua.key_encrypted ELSE oa.key_encrypted END) AS anthropic_key_encrypted,
+  COALESCE(k.openai_key_encrypted,    CASE WHEN k.org_id IS NULL THEN uo.key_encrypted ELSE oo.key_encrypted END) AS openai_key_encrypted,
+  COALESCE(k.gemini_key_encrypted,    CASE WHEN k.org_id IS NULL THEN ug.key_encrypted ELSE og.key_encrypted END) AS gemini_key_encrypted,
+  COALESCE(k.grok_key_encrypted,      CASE WHEN k.org_id IS NULL THEN ux.key_encrypted ELSE ox.key_encrypted END) AS grok_key_encrypted`;
 
 const PROVIDER_KEY_JOINS = `
   LEFT JOIN user_provider_keys ua ON ua.user_id = k.user_id AND ua.provider = 'anthropic'
   LEFT JOIN user_provider_keys uo ON uo.user_id = k.user_id AND uo.provider = 'openai'
   LEFT JOIN user_provider_keys ug ON ug.user_id = k.user_id AND ug.provider = 'gemini'
-  LEFT JOIN user_provider_keys ux ON ux.user_id = k.user_id AND ux.provider = 'grok'`;
+  LEFT JOIN user_provider_keys ux ON ux.user_id = k.user_id AND ux.provider = 'grok'
+  LEFT JOIN org_provider_keys oa ON oa.org_id = k.org_id AND oa.provider = 'anthropic'
+  LEFT JOIN org_provider_keys oo ON oo.org_id = k.org_id AND oo.provider = 'openai'
+  LEFT JOIN org_provider_keys og ON og.org_id = k.org_id AND og.provider = 'gemini'
+  LEFT JOIN org_provider_keys ox ON ox.org_id = k.org_id AND ox.provider = 'grok'`;
+
+// Enforced org policies override member key settings, most specific tier
+// first (member > department > org); a NULL policy column inherits from the
+// broader tier; non-enforced policies only seed defaults for NEW keys (web).
+// Org keys answer to the ORG's billing lock, personal keys to the user's.
+const EFFECTIVE_SETTINGS = `
+  CASE WHEN k.org_id IS NULL THEN u.billing_locked ELSE o.billing_locked END AS billing_locked,
+  COALESCE(CASE WHEN pm.enforce THEN pm.auto_cache_control END,
+           CASE WHEN pd.enforce THEN pd.auto_cache_control END,
+           CASE WHEN po.enforce THEN po.auto_cache_control END,
+           k.auto_cache_control) AS auto_cache_control,
+  COALESCE(CASE WHEN pm.enforce THEN pm.keepalive_enabled END,
+           CASE WHEN pd.enforce THEN pd.keepalive_enabled END,
+           CASE WHEN po.enforce THEN po.keepalive_enabled END,
+           k.keepalive_enabled) AS keepalive_enabled,
+  COALESCE(CASE WHEN pm.enforce THEN pm.keepalive_budget_usd_daily END,
+           CASE WHEN pd.enforce THEN pd.keepalive_budget_usd_daily END,
+           CASE WHEN po.enforce THEN po.keepalive_budget_usd_daily END,
+           k.keepalive_budget_usd_daily) AS keepalive_budget_usd_daily,
+  COALESCE(CASE WHEN pm.enforce THEN pm.anthropic_cache_ttl END,
+           CASE WHEN pd.enforce THEN pd.anthropic_cache_ttl END,
+           CASE WHEN po.enforce THEN po.anthropic_cache_ttl END,
+           k.anthropic_cache_ttl) AS anthropic_cache_ttl`;
+
+const EFFECTIVE_SETTINGS_JOINS = `
+  LEFT JOIN organizations o ON o.id = k.org_id
+  LEFT JOIN org_cache_policies po ON po.org_id = k.org_id AND po.scope = 'org'
+  LEFT JOIN org_cache_policies pd ON pd.org_id = k.org_id AND pd.scope = 'department'
+       AND pd.department_id = u.org_department_id
+  LEFT JOIN org_cache_policies pm ON pm.org_id = k.org_id AND pm.scope = 'member'
+       AND pm.member_user_id = k.user_id`;
 
 // Hot-path key cache: one DB read per key per TTL instead of per request, and
 // the proxy keeps serving traffic through short DB blips (stale-on-error).
@@ -53,13 +93,15 @@ export async function findApiKey(pool: pg.Pool, rawKey: string): Promise<ApiKeyR
   if (hit && hit.exp > nowMs) return hit.row;
   try {
     const { rows } = await pool.query(
-      `SELECT k.id, k.user_id, u.billing_locked, ${PROVIDER_KEY_FALLBACK},
-              k.auto_cache_control, k.keepalive_enabled, k.keepalive_budget_usd_daily,
-              k.anthropic_cache_ttl, k.openai_cache_retention
+      `SELECT k.id, k.user_id, k.org_id, u.org_department_id, ${PROVIDER_KEY_FALLBACK},
+              ${EFFECTIVE_SETTINGS},
+              k.openai_cache_retention
          FROM api_keys k
          JOIN users u ON u.id = k.user_id
          ${PROVIDER_KEY_JOINS}
-        WHERE k.key_hash=$1 AND k.revoked_at IS NULL`,
+         ${EFFECTIVE_SETTINGS_JOINS}
+        WHERE k.key_hash=$1 AND k.revoked_at IS NULL
+          AND (k.org_id IS NULL OR o.deleted_at IS NULL)`,
       [hash]
     );
     const row: ApiKeyRow | null = rows[0] ?? null;
@@ -80,7 +122,7 @@ export async function findApiKey(pool: pg.Pool, rawKey: string): Promise<ApiKeyR
   }
 }
 
-export { PROVIDER_KEY_FALLBACK, PROVIDER_KEY_JOINS };
+export { PROVIDER_KEY_FALLBACK, PROVIDER_KEY_JOINS, EFFECTIVE_SETTINGS, EFFECTIVE_SETTINGS_JOINS };
 
 export interface CostBreakdown {
   actualUsd: number;
@@ -146,16 +188,20 @@ export async function saveKeepaliveState(
   prefixTokenEstimate: number,
   encryptionKey: string
 ): Promise<void> {
-  const enc = encrypt(JSON.stringify(prefix), encryptionKey);
+  const plain = JSON.stringify(prefix);
+  const enc = encrypt(plain, encryptionKey);
   // model is stored in the clear so the sweep can pick the right ping cadence
   // (e.g. GPT-5.6+ 30m windows) without decrypting every prefix
   const model = typeof (prefix as any)?.model === "string" ? (prefix as any).model : "";
+  // prefix_sha lets the sweep dedupe warming inside an org: identical prefixes
+  // behind the same org provider account share one provider cache entry, so
+  // one ping warms it for every member
   await pool.query(
-    `INSERT INTO keepalive_state (api_key_id, provider, encrypted_prefix, model, prefix_token_estimate, last_request_at)
-     VALUES ($1,$2,$3,$4,$5, now())
+    `INSERT INTO keepalive_state (api_key_id, provider, encrypted_prefix, model, prefix_token_estimate, prefix_sha, last_request_at)
+     VALUES ($1,$2,$3,$4,$5,$6, now())
      ON CONFLICT (api_key_id, provider) DO UPDATE
-       SET encrypted_prefix=$3, model=$4, prefix_token_estimate=$5, last_request_at=now()`,
-    [apiKeyId, provider, enc, model, prefixTokenEstimate]
+       SET encrypted_prefix=$3, model=$4, prefix_token_estimate=$5, prefix_sha=$6, last_request_at=now()`,
+    [apiKeyId, provider, enc, model, prefixTokenEstimate, sha256Hex(plain)]
   );
 }
 

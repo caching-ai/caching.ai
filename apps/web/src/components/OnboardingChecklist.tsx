@@ -27,11 +27,14 @@ export default function OnboardingChecklist() {
 
   const load = useCallback(async () => {
     try {
-      const [pk, keys, stats]: any[] = await Promise.all([
-        fetch("/api/provider-keys").then((r) => (r.ok ? r.json() : {})),
+      const [keys, stats]: any[] = await Promise.all([
         fetch("/api/keys").then((r) => (r.ok ? r.json() : {})),
         fetch("/api/stats?days=30").then((r) => (r.ok ? r.json() : {})),
       ]);
+      // in the org workspace the relevant provider keys are the TEAM's
+      const pk: any = await fetch(
+        keys.workspace === "org" ? "/api/org/provider-keys" : "/api/provider-keys"
+      ).then((r) => (r.ok ? r.json() : {}));
       setState({
         provider: Object.keys(pk.registered ?? {}).length > 0,
         ck: (keys.keys ?? []).some((k: any) => !k.revoked_at),

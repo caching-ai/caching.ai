@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getWorkspace } from "@/lib/org";
 import { wastePerInputTokenUsd, type Provider } from "@caching/shared";
 
 const WINDOWS = [7, 30, 90];
@@ -17,9 +17,17 @@ const WINDOWS = [7, 30, 90];
  * Heatmap   = request counts by UTC weekday×hour; the client shifts to local time.
  */
 export async function GET(req: NextRequest) {
-  const sess = await getSession();
-  if (!sess) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const ws = await getWorkspace();
+  if (!ws) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const sess = ws.session;
   const pool = db();
+
+  // workspace scope: personal keys only, or the member's own TEAM keys —
+  // the org-wide view lives at /api/org/stats (admins)
+  const scope = ws.org ? "k.user_id = $1 AND k.org_id = $3" : "k.user_id = $1 AND k.org_id IS NULL";
+  const scopeShort = ws.org ? "k.user_id = $1 AND k.org_id = $2" : "k.user_id = $1 AND k.org_id IS NULL";
+  const winParams = ws.org ? (extra: number) => [sess.uid, extra, ws.org!.orgId] : (extra: number) => [sess.uid, extra];
+  const plainParams = ws.org ? [sess.uid, ws.org.orgId] : [sess.uid];
 
   const days = Number(req.nextUrl.searchParams.get("days") ?? 30);
   if (!WINDOWS.includes(days)) {
@@ -41,9 +49,9 @@ export async function GET(req: NextRequest) {
             count(*) FILTER (WHERE is_keepalive)::int AS keepalive_pings
        FROM request_logs rl
        JOIN api_keys k ON k.id = rl.api_key_id
-      WHERE k.user_id = $1 AND ts > now() - make_interval(days => $2)
+      WHERE ${scope} AND ts > now() - make_interval(days => $2)
       GROUP BY 1, 2, 3 ORDER BY 1`,
-    [sess.uid, days]
+    winParams(days)
   );
 
   // End-to-end latency percentiles: overall (model IS NULL row) + per model.
@@ -54,10 +62,10 @@ export async function GET(req: NextRequest) {
             count(*)::int AS sample
        FROM request_logs rl
        JOIN api_keys k ON k.id = rl.api_key_id
-      WHERE k.user_id = $1 AND ts > now() - make_interval(days => $2)
+      WHERE ${scope} AND ts > now() - make_interval(days => $2)
         AND NOT rl.is_keepalive AND rl.status < 400 AND rl.latency_ms IS NOT NULL
       GROUP BY GROUPING SETS ((rl.model), ())`,
-    [sess.uid, days]
+    winParams(days)
   );
 
   const heatmapQ = await pool.query(
@@ -65,10 +73,10 @@ export async function GET(req: NextRequest) {
             count(*)::int AS requests
        FROM request_logs rl
        JOIN api_keys k ON k.id = rl.api_key_id
-      WHERE k.user_id = $1 AND ts > now() - make_interval(days => $2)
+      WHERE ${scope} AND ts > now() - make_interval(days => $2)
         AND NOT rl.is_keepalive
       GROUP BY 1, 2`,
-    [sess.uid, days]
+    winParams(days)
   );
 
   const recent = await pool.query(
@@ -77,18 +85,18 @@ export async function GET(req: NextRequest) {
             rl.saved_usd::float AS saved_usd, rl.cache_breaker_detected
        FROM request_logs rl
        JOIN api_keys k ON k.id = rl.api_key_id
-      WHERE k.user_id = $1
+      WHERE ${scopeShort}
       ORDER BY rl.ts DESC LIMIT 20`,
-    [sess.uid]
+    plainParams
   );
 
   const breakerWindow = await pool.query(
     `SELECT count(*)::int AS total, count(*) FILTER (WHERE cache_breaker_detected)::int AS breakers
        FROM (SELECT rl.cache_breaker_detected
                FROM request_logs rl JOIN api_keys k ON k.id = rl.api_key_id
-              WHERE k.user_id = $1 AND NOT rl.is_keepalive
+              WHERE ${scopeShort} AND NOT rl.is_keepalive
               ORDER BY rl.ts DESC LIMIT 100) w`,
-    [sess.uid]
+    plainParams
   );
 
   // per-day + per-model rollups, waste computed with the pricing table

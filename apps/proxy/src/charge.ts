@@ -189,14 +189,15 @@ interface DuePeriod {
 }
 
 async function chargeStripe(
-  deps: ChargeDeps, p: DuePeriod, feeUsd: number, doFetch: typeof fetch
+  deps: ChargeDeps, p: DuePeriod, feeUsd: number, doFetch: typeof fetch,
+  idem = `cai-fee-${p.user_id}-${p.period_start}`
 ): Promise<{ ok: boolean; ref?: string; error?: string }> {
   const res = await doFetch(`${deps.stripeUrl ?? "https://api.stripe.com"}/v1/payment_intents`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${deps.stripeSecretKey}`,
       "content-type": "application/x-www-form-urlencoded",
-      "idempotency-key": `cai-fee-${p.user_id}-${p.period_start}`,
+      "idempotency-key": idem,
     },
     body: new URLSearchParams({
       amount: String(Math.round(feeUsd * 100)),
@@ -216,7 +217,8 @@ async function chargeStripe(
 }
 
 async function chargeToss(
-  deps: ChargeDeps, p: DuePeriod, amountKrw: number, doFetch: typeof fetch
+  deps: ChargeDeps, p: DuePeriod, amountKrw: number, doFetch: typeof fetch,
+  idem = `cai-fee-${p.user_id}-${p.period_start}`
 ): Promise<{ ok: boolean; ref?: string; error?: string }> {
   const billingKey = decrypt(p.toss_billing_key_encrypted!, deps.encryptionKey);
   const res = await doFetch(
@@ -309,12 +311,188 @@ export async function chargeSweep(deps: ChargeDeps): Promise<number> {
   return charged;
 }
 
+// ---------- org variants: same policy, org tables, mails to owner+admins ----------
+
+async function orgAdminEmails(pool: pg.Pool, orgId: number): Promise<{ email: string; locale: string }[]> {
+  const { rows } = await pool.query(
+    `SELECT email, COALESCE(locale, 'en') AS locale FROM users
+      WHERE org_id = $1 AND org_role IN ('owner', 'admin')`,
+    [orgId]
+  );
+  return rows;
+}
+
+/** Collect closed org periods against the org's card. */
+export async function chargeSweepOrg(deps: ChargeDeps): Promise<number> {
+  const { pool } = deps;
+  const doFetch = deps.fetchImpl ?? fetch;
+  const minCharge = deps.minChargeUsd ?? 5;
+  const fx = deps.fxKrwPerUsd ?? 1400;
+
+  const { rows } = await pool.query(
+    `SELECT bp.org_id, bp.period_start::text AS period_start, bp.fee_usd,
+            pm.psp, pm.stripe_customer_id, pm.stripe_payment_method_id,
+            pm.toss_billing_key_encrypted, pm.toss_customer_key
+       FROM org_billing_periods bp
+       LEFT JOIN org_payment_methods pm ON pm.org_id = bp.org_id
+      WHERE bp.status IN ('accruing', 'no_payment_method')
+        AND bp.period_end < ($1::timestamptz)::date - 1`,
+    [(deps.now ? deps.now() : new Date()).toISOString()]
+  );
+
+  let charged = 0;
+  for (const p of rows) {
+    const fee = Number(p.fee_usd);
+    const setStatus = (status: string) =>
+      pool.query(
+        `UPDATE org_billing_periods SET status=$3 WHERE org_id=$1 AND period_start=$2::date`,
+        [p.org_id, p.period_start, status]
+      );
+
+    if (fee < minCharge) {
+      await setStatus("waived_min");
+      continue;
+    }
+    const stripeReady = p.psp === "stripe" && p.stripe_customer_id && p.stripe_payment_method_id && deps.stripeSecretKey;
+    const tossReady = p.psp === "toss" && p.toss_billing_key_encrypted && deps.tossSecretKey;
+    if (!stripeReady && !tossReady) {
+      await setStatus("no_payment_method");
+      continue;
+    }
+
+    const currency = p.psp === "toss" ? "KRW" : "USD";
+    const amount = p.psp === "toss" ? Math.round(fee * fx) : Math.round(fee * 100) / 100;
+
+    const claim = await pool.query(
+      `INSERT INTO org_billing_charges(org_id, period_start, amount_usd, charged_amount, currency, psp, status)
+       VALUES($1,$2::date,$3,$4,$5,$6,'pending')
+       ON CONFLICT (org_id, period_start) DO NOTHING RETURNING id`,
+      [p.org_id, p.period_start, fee, amount, currency, p.psp]
+    );
+    if (!claim.rows[0]) continue;
+
+    const idem = `cai-orgfee-${p.org_id}-${p.period_start}`;
+    let result: { ok: boolean; ref?: string; error?: string };
+    try {
+      result = p.psp === "toss"
+        ? await chargeToss(deps, p as any, amount, doFetch, idem)
+        : await chargeStripe(deps, p as any, fee, doFetch, idem);
+    } catch (e) {
+      result = { ok: false, error: (e as Error).message.slice(0, 300) };
+    }
+
+    await pool.query(
+      `UPDATE org_billing_charges SET status=$2, psp_ref=$3, error=$4 WHERE id=$1`,
+      [claim.rows[0].id, result.ok ? "paid" : "failed", result.ref ?? null, result.error ?? null]
+    );
+    await setStatus(result.ok ? "paid" : "charge_failed");
+    if (result.ok) charged++;
+  }
+  return charged;
+}
+
+export async function retryFailedChargesOrg(deps: ChargeDeps): Promise<number> {
+  const { pool } = deps;
+  const doFetch = deps.fetchImpl ?? fetch;
+  const nowMs = (deps.now ? deps.now() : new Date()).getTime();
+  const { rows } = await pool.query(
+    `SELECT bc.id AS charge_id, bc.attempts, bp.org_id, bp.period_start::text AS period_start, bp.fee_usd,
+            pm.psp, pm.stripe_customer_id, pm.stripe_payment_method_id,
+            pm.toss_billing_key_encrypted, pm.toss_customer_key
+       FROM org_billing_charges bc
+       JOIN org_billing_periods bp ON bp.org_id = bc.org_id AND bp.period_start = bc.period_start
+       LEFT JOIN org_payment_methods pm ON pm.org_id = bc.org_id
+      WHERE bc.status = 'failed' AND bc.attempts < $1
+        AND bc.last_attempt_at <= to_timestamp($2 / 1000.0)`,
+    [MAX_ATTEMPTS, nowMs - RETRY_EVERY_MS]
+  );
+  let recovered = 0;
+  for (const p of rows) {
+    const claim = await pool.query(
+      `UPDATE org_billing_charges SET attempts = attempts + 1, last_attempt_at = to_timestamp($2 / 1000.0)
+        WHERE id = $1 AND status = 'failed' AND attempts = $3 RETURNING id`,
+      [p.charge_id, nowMs, p.attempts]
+    );
+    if (!claim.rows[0]) continue;
+
+    const fee = Number(p.fee_usd);
+    const fx = deps.fxKrwPerUsd ?? 1400;
+    const idem = `cai-orgfee-${p.org_id}-${p.period_start}`;
+    let result: { ok: boolean; ref?: string; error?: string };
+    try {
+      result = p.psp === "toss" && p.toss_billing_key_encrypted && deps.tossSecretKey
+        ? await chargeToss(deps, p as any, Math.round(fee * fx), doFetch, idem)
+        : p.psp === "stripe" && p.stripe_payment_method_id && deps.stripeSecretKey
+          ? await chargeStripe(deps, p as any, fee, doFetch, idem)
+          : { ok: false, error: "no usable payment method" };
+    } catch (e) {
+      result = { ok: false, error: (e as Error).message.slice(0, 300) };
+    }
+    await pool.query(
+      `UPDATE org_billing_charges SET status=$2, psp_ref=COALESCE($3, psp_ref), error=$4 WHERE id=$1`,
+      [p.charge_id, result.ok ? "paid" : "failed", result.ref ?? null, result.error ?? null]
+    );
+    await pool.query(
+      `UPDATE org_billing_periods SET status=$3 WHERE org_id=$1 AND period_start=$2::date`,
+      [p.org_id, p.period_start, result.ok ? "paid" : "charge_failed"]
+    );
+    if (result.ok) recovered++;
+  }
+  return recovered;
+}
+
+/**
+ * Org dunning: identical policy to personal — past-grace delinquent fees ≥
+ * threshold pause the ORG's optimization (organizations.billing_locked, read
+ * on the hot path for org keys); pass-through never stops. Transition mails
+ * go to every owner/admin.
+ */
+export async function dunningSweepOrg(deps: ChargeDeps): Promise<{ locked: number; unlocked: number }> {
+  const { pool } = deps;
+  const nowIso = (deps.now ? deps.now() : new Date()).toISOString();
+  const delinquentSql = `
+    SELECT COALESCE(sum(bp.fee_usd), 0) FROM org_billing_periods bp
+     WHERE bp.org_id = o.id
+       AND bp.status IN ('charge_failed', 'no_payment_method')
+       AND bp.period_end < ($1::timestamptz)::date - $2::int`;
+
+  const lockedRows = await pool.query(
+    `UPDATE organizations o SET billing_locked = true
+      WHERE o.billing_locked = false AND (${delinquentSql}) >= $3
+      RETURNING o.id, (${delinquentSql}) AS due`,
+    [nowIso, DUNNING_GRACE_DAYS, DUNNING_MIN_USD]
+  );
+  for (const r of lockedRows.rows) {
+    for (const a of await orgAdminEmails(pool, r.id)) {
+      await sendDunningEmail(deps, a.email, a.locale, "lock", Number(r.due).toFixed(2));
+    }
+  }
+  const unlockedRows = await pool.query(
+    `UPDATE organizations o SET billing_locked = false
+      WHERE o.billing_locked = true AND (${delinquentSql}) < $3
+      RETURNING o.id`,
+    [nowIso, DUNNING_GRACE_DAYS, DUNNING_MIN_USD]
+  );
+  for (const r of unlockedRows.rows) {
+    for (const a of await orgAdminEmails(pool, r.id)) {
+      await sendDunningEmail(deps, a.email, a.locale, "unlock", "0");
+    }
+  }
+  return { locked: lockedRows.rowCount ?? 0, unlocked: unlockedRows.rowCount ?? 0 };
+}
+
 async function fullChargePass(deps: ChargeDeps): Promise<void> {
   await chargeSweep(deps);
   await retryFailedCharges(deps);
+  await chargeSweepOrg(deps);
+  await retryFailedChargesOrg(deps);
   const d = await dunningSweep(deps);
-  if (d.locked || d.unlocked) {
-    console.log(`dunning: ${d.locked} account(s) paused, ${d.unlocked} restored`);
+  const od = await dunningSweepOrg(deps);
+  if (d.locked || d.unlocked || od.locked || od.unlocked) {
+    console.log(
+      `dunning: ${d.locked} account(s) paused, ${d.unlocked} restored; ` +
+        `${od.locked} org(s) paused, ${od.unlocked} restored`
+    );
   }
 }
 

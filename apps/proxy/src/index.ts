@@ -16,6 +16,7 @@ import {
   sendViaResend,
 } from "./emailReport.js";
 import { startBudgetAlertLoop } from "./budgetAlert.js";
+import { startOrgEmailLoops } from "./orgEmail.js";
 import { startRollupLoop } from "./rollup.js";
 import { startFxLoop } from "./fx.js";
 
@@ -87,7 +88,8 @@ if (process.env.RESEND_API_KEY) {
   const resendApiKey = process.env.RESEND_API_KEY;
   startWeeklyReportLoop({ pool, resendApiKey, unsubscribeSecret: deriveTokenSecret(cfg.encryptionKey) });
   startBudgetAlertLoop({ pool, resendApiKey, unsubscribeSecret: deriveTokenSecret(cfg.encryptionKey) });
-  console.log("weekly report + budget alert loops armed");
+  startOrgEmailLoops({ pool, resendApiKey, unsubscribeSecret: deriveTokenSecret(cfg.encryptionKey) });
+  console.log("weekly report + budget alert + org email loops armed");
 
   // ops-only: render the current weekly report and send it to an override
   // address (test mode — bypasses the once-per-week dedup on purpose).

@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getWorkspace } from "@/lib/org";
 
 // Prefix Optimizer: which prompt block (system / tools / first message)
 // actually changes between requests, measured over the last 7 days of real
 // traffic. A block that hashes differently on most requests is what's
 // breaking the cache.
 export async function GET() {
-  const sess = await getSession();
-  if (!sess) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const ws = await getWorkspace();
+  if (!ws) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const sess = ws.session;
 
   const { rows } = await db().query(
     `SELECT rl.provider, rl.model, b->>'block' AS block,
@@ -18,13 +19,14 @@ export async function GET() {
        JOIN api_keys k ON k.id = rl.api_key_id
       CROSS JOIN LATERAL jsonb_array_elements(rl.prefix_block_hashes) b
       WHERE k.user_id = $1
+        AND ${ws.org ? "k.org_id = $2" : "k.org_id IS NULL"}
         AND rl.ts > now() - interval '7 days'
         AND rl.prefix_block_hashes IS NOT NULL
         AND NOT rl.is_keepalive
       GROUP BY rl.provider, rl.model, b->>'block'
      HAVING count(*) >= 5
       ORDER BY count(DISTINCT b->>'hash')::float / count(*) DESC`,
-    [sess.uid]
+    ws.org ? [sess.uid, ws.org.orgId] : [sess.uid]
   );
 
   const blocks = rows.map((r) => ({
