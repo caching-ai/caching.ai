@@ -1,7 +1,7 @@
 // Canonical dictionary — every locale must match this shape.
 export const en = {
   meta: {
-    title: "Cut AI costs 90% — Caching.ai",
+    title: "Caching.ai — Cut AI costs 90%",
     description:
       "Drop-in proxy for Anthropic, OpenAI, and Gemini that protects, warms, and measures your prompt cache — so the 90% discount you already qualify for actually shows up on your bill.",
   },

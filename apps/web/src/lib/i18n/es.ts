@@ -2,7 +2,7 @@ import type { Dict } from "./en";
 
 export const es: Dict = {
   meta: {
-    title: "Ahorra 90% en IA — Caching.ai",
+    title: "Caching.ai — Ahorra 90% en IA",
     description:
       "Proxy drop-in para Anthropic, OpenAI y Gemini que protege, calienta y mide tu caché de prompts — para que el descuento del 90% que ya te corresponde aparezca de verdad en tu factura.",
   },
