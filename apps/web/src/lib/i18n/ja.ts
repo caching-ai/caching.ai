@@ -380,6 +380,9 @@ export const ja: Dict = {
       createdBadge: "キー作成完了 — 今すぐコピー",
       createdBody: "完全なキーを表示するのはこの一度だけです。安全な場所に保管してください。",
       copy: "コピー",
+      agentTitle: "あるいは丸ごとエージェントに任せる",
+      agentBody: "このプロンプトをClaude CodeやCodexなどのコーディングエージェントに貼り付けると、当社の機械可読セットアップガイドを読み、バックアップとdiff付きでツールを接続し、テスト呼び出しまで行います。",
+      agentCopy: "プロンプトをコピー",
       toolsGuide: "Claude Code・Codex・Cursor・Clineをお使いなら? ツール別接続ガイド →",
       copySnippet: "スニペットをコピー",
       created: "作成",
@@ -588,6 +591,8 @@ export const ja: Dict = {
     alsoNote: "ストリーミングのOpenAIリクエストには、欠けていればstream_options.include_usageを追加します。使用量計測のためで、ストリーム内容には触れません。/v1/completions と /v1/embeddings も同じ計測付きで通過します。",
     connectT: "どのツールもつながる — コピペレシピ",
     connectB: "主要なAIツールはbase URLをひとつ替えるだけでプロキシにつながります。下からお使いのツールを選んでください — ck_キーは元のプロバイダーキーの場所に入れます。",
+    connectAgentT: "最速の方法: エージェントに任せる",
+    connectAgentB: "Claude CodeやCodexなどのエージェントにこれを貼り付けてください（キーだけ差し替え）。セットアップガイドに従い、バックアップ・diff・検証呼び出しまで自動で行います。",
     connectNotes: {
       claudeCode: "設定ファイルまたはenvで公式サポート。初回のインタラクティブ実行時に一度だけカスタムキーの承認を求められます。",
       codex: "CodexはResponses APIで通信します — プロキシがネイティブ対応なのでそのまま動きます。",

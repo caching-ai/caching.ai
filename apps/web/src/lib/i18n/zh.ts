@@ -380,6 +380,9 @@ export const zh: Dict = {
       createdBadge: "密钥已创建 — 立即复制",
       createdBody: "完整密钥只显示这一次，请妥善保存。",
       copy: "复制",
+      agentTitle: "或者整个交给你的智能体",
+      agentBody: "把这段提示词粘贴到 Claude Code、Codex 等编码智能体里 — 它会读取我们的机器可读配置指南，带备份和 diff 地接好各工具，并跑一次测试调用验证。",
+      agentCopy: "复制提示词",
       toolsGuide: "在用 Claude Code、Codex、Cursor、Cline？工具接入指南 →",
       copySnippet: "复制代码片段",
       created: "创建于",
@@ -588,6 +591,8 @@ export const zh: Dict = {
     alsoNote: "对流式 OpenAI 请求，如缺少 stream_options.include_usage 我们会补上，以便计量用量 — 不会改动你的流内容。/v1/completions 和 /v1/embeddings 同样直通并计量。",
     connectT: "任何工具都能接 — 复制粘贴即可",
     connectB: "主流 AI 工具只要改一个 base URL 就能接到代理。在下面选你的工具 — ck_ 密钥放在原来服务商密钥的位置。",
+    connectAgentT: "最快的方式：让智能体来配",
+    connectAgentB: "把这段粘贴到 Claude Code、Codex 等智能体（换成你的密钥）。它会按我们的指南完成备份、diff 和最终验证调用。",
     connectNotes: {
       claudeCode: "通过设置文件或环境变量官方支持。第一次交互式运行会请求你确认一次自定义密钥。",
       codex: "Codex 走 Responses API — 代理原生支持，直接可用。",

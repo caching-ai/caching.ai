@@ -380,6 +380,9 @@ export const es: Dict = {
       createdBadge: "CLAVE CREADA — CÓPIALA AHORA",
       createdBody: "Esta es la única vez que mostraremos la clave completa. Guárdala en un lugar seguro.",
       copy: "Copiar",
+      agentTitle: "O déjaselo entero a tu agente",
+      agentBody: "Pega este prompt en Claude Code, Codex o cualquier agente de código — lee nuestra guía de configuración legible por máquinas, conecta tus herramientas con copias de seguridad y diffs, y verifica con una llamada de prueba.",
+      agentCopy: "Copiar prompt",
       toolsGuide: "¿Usas Claude Code, Codex, Cursor, Cline…? Guía de conexión por herramienta →",
       copySnippet: "Copiar snippet",
       created: "creada",
@@ -588,6 +591,8 @@ export const es: Dict = {
     alsoNote: "En peticiones OpenAI en streaming añadimos stream_options.include_usage si falta, para poder medir el uso — tu contenido no se toca. /v1/completions y /v1/embeddings pasan igual, con la misma medición.",
     connectT: "Conecta cualquier herramienta — recetas de copiar y pegar",
     connectB: "Casi cualquier herramienta de IA apunta al proxy cambiando una sola base URL. Elige la tuya abajo — la clave ck_ va donde antes iba la clave del proveedor.",
+    connectAgentT: "Lo más rápido: que lo configure tu agente",
+    connectAgentB: "Pega esto en Claude Code, Codex o cualquier agente (cambia la clave). Sigue nuestra guía con backups, diffs y una llamada final de verificación.",
     connectNotes: {
       claudeCode: "Soportado oficialmente vía settings o variables de entorno. La primera ejecución interactiva pide aprobar la clave personalizada una vez.",
       codex: "Codex habla la Responses API — el proxy la soporta de forma nativa, así que funciona sin más.",

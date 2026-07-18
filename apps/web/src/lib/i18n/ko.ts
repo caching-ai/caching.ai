@@ -380,6 +380,9 @@ export const ko: Dict = {
       createdBadge: "키 생성 완료 — 지금 복사하세요",
       createdBody: "전체 키는 지금 한 번만 보여드려요. 안전한 곳에 보관하세요.",
       copy: "복사",
+      agentTitle: "아니면 통째로 에이전트에게 맡기세요",
+      agentBody: "이 프롬프트를 Claude Code·Codex 같은 코딩 에이전트에 붙여넣으면, 저희 기계용 설정 문서를 읽고 백업·diff와 함께 도구들을 알아서 연결한 뒤 테스트 호출까지 해줘요.",
+      agentCopy: "프롬프트 복사",
       toolsGuide: "Claude Code·Codex·Cursor·Cline을 쓰신다면? 도구별 연결 가이드 →",
       copySnippet: "스니펫 복사",
       created: "생성",
@@ -588,6 +591,8 @@ export const ko: Dict = {
     alsoNote: "스트리밍 OpenAI 요청에는 stream_options.include_usage가 없으면 넣어드려요. 사용량 계측을 위한 것이고 스트림 내용은 건드리지 않아요. /v1/completions와 /v1/embeddings도 같은 방식으로 통과·계측돼요.",
     connectT: "어떤 도구든 연결 — 복붙 레시피",
     connectB: "웬만한 AI 도구는 base URL 하나만 바꾸면 프록시로 연결돼요. 아래에서 쓰시는 도구를 고르세요 — ck_ 키는 원래 프로바이더 키가 들어가던 자리에 넣으면 돼요.",
+    connectAgentT: "가장 빠른 길: 에이전트에게 시키기",
+    connectAgentB: "Claude Code·Codex 같은 코딩 에이전트에 이걸 붙여넣으세요(키만 바꿔서요). 저희 설정 가이드를 따라 백업·diff·검증 호출까지 알아서 해줘요.",
     connectNotes: {
       claudeCode: "설정 파일이나 env로 공식 지원돼요. 첫 인터랙티브 실행 때 커스텀 키 승인을 한 번 물어봐요.",
       codex: "Codex는 Responses API로 통신해요 — 프록시가 네이티브로 지원해서 그대로 동작해요.",

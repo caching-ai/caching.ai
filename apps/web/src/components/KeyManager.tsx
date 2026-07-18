@@ -138,6 +138,30 @@ const PROVIDER_LABELS: Record<string, string> = {
   anthropic: "Anthropic", openai: "OpenAI", gemini: "Gemini", grok: "Grok",
 };
 
+export function agentPrompt(ck: string): string {
+  return `Set up the caching.ai proxy for my AI tools.
+1) Fetch https://caching.ai/agent-setup.md and follow it exactly, including its safety rules.
+2) My caching.ai key: ${ck}
+3) Detect which supported tools I use, confirm the list with me, back up every config you touch, apply the changes, then run the verification step and show me the result.`;
+}
+
+function AgentHandoff({ ck }: { ck: string }) {
+  const { dict } = useI18n();
+  const t = dict.console.keys;
+  const text = agentPrompt(ck);
+  return (
+    <div className="mt-5 rounded-card border border-accent-purple/40 bg-accent-purple/[0.05] p-5" data-testid="agent-handoff">
+      <div className="text-[15.5px] font-semibold text-ink">🤖 {t.agentTitle}</div>
+      <p className="mt-1 text-[14px] leading-relaxed text-body-mid">{t.agentBody}</p>
+      <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-btn bg-[#0d0d0d] p-4 font-mono text-[13px] leading-relaxed text-[#e8e8e8]">{text}</pre>
+      <button className="btn-secondary mt-3 !py-2 !min-h-[36px] text-[14px]"
+        onClick={() => navigator.clipboard.writeText(text).catch(() => {})}>
+        {t.agentCopy}
+      </button>
+    </div>
+  );
+}
+
 function Snippet({ proxyUrl, plaintext }: { proxyUrl: string; plaintext: string }) {
   const { dict } = useI18n();
   const [prov, setProv] = useState<(typeof SNIPPET_PROVIDERS)[number]>("anthropic");
@@ -405,6 +429,7 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
               {t.copy}
             </button>
           </div>
+          <AgentHandoff ck={newKey.plaintext} />
           <Snippet proxyUrl={proxyUrl} plaintext={newKey.plaintext} />
         </div>
       )}

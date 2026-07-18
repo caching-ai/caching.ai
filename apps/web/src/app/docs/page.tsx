@@ -75,6 +75,17 @@ client.chat.completions.create(model="grok-4.5", messages=[...])`}</Code>
         <li id="connect">
           <h2 className="text-display-md text-ink">{t.connectT}</h2>
           <p className="mt-2 text-body-mid">{t.connectB}</p>
+          {/* the fastest path: let the user's own agent do the setup */}
+          <div className="mt-5 rounded-card border border-accent-purple/40 bg-accent-purple/[0.05] p-5">
+            <div className="text-[15.5px] font-semibold text-ink">🤖 {t.connectAgentT}</div>
+            <p className="mt-1 text-[14px] leading-relaxed text-body-mid">{t.connectAgentB}</p>
+            <div className="mt-3">
+              <Code>{`Set up the caching.ai proxy for my AI tools.
+1) Fetch https://caching.ai/agent-setup.md and follow it exactly, including its safety rules.
+2) My caching.ai key: ck_your_key_here
+3) Detect which supported tools I use, confirm the list with me, back up every config you touch, apply the changes, then run the verification step and show me the result.`}</Code>
+            </div>
+          </div>
           <div className="mt-6 flex flex-col gap-8">
             {[
               {

@@ -379,6 +379,9 @@ export const en = {
       createdBadge: "KEY CREATED — COPY IT NOW",
       createdBody: "This is the only time we'll show the full key. Store it somewhere safe.",
       copy: "Copy",
+      agentTitle: "Or hand it all to your agent",
+      agentBody: "Paste this prompt into Claude Code, Codex, or any coding agent — it reads our machine-readable setup guide, configures your tools with backups and diffs, and verifies with a test call.",
+      agentCopy: "Copy prompt",
       toolsGuide: "Using Claude Code, Codex, Cursor, Cline…? Tool-by-tool connection guide →",
       copySnippet: "Copy snippet",
       created: "created",
@@ -587,6 +590,8 @@ export const en = {
     alsoNote: "For streaming OpenAI requests we add stream_options.include_usage when it's missing so usage is still metered — your stream content is untouched. /v1/completions and /v1/embeddings pass through with the same metering.",
     connectT: "Connect any tool — copy-paste recipes",
     connectB: "Every popular AI tool can point at the proxy with one base-URL change. Pick yours below; the ck_ key goes wherever the provider key used to go.",
+    connectAgentT: "Fastest: let your agent set it up",
+    connectAgentB: "Paste this into Claude Code, Codex, or any coding agent (replace the key). It follows our setup guide with backups, diffs, and a final verification call.",
     connectNotes: {
       claudeCode: "Officially supported via settings or env vars. First interactive run asks you to approve the custom key once.",
       codex: "Codex speaks the Responses API — the proxy supports it natively, so this just works.",
