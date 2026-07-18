@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "./I18nProvider";
+import { IconFlag } from "./icons";
 
 const DISMISS_KEY = "cai-onboarding-dismissed";
 
@@ -58,7 +59,7 @@ export default function OnboardingChecklist() {
     <section className="card !p-6 border-accent-green/60" data-testid="onboarding">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-[18px] font-semibold text-ink">🚀 {t.title}</h2>
+          <h2 className="flex items-center gap-2 text-[18px] font-semibold text-ink"><IconFlag size={16} className="shrink-0" /> {t.title}</h2>
           <p className="mt-1 text-[14.5px] text-body-mid">{t.sub}</p>
         </div>
         <button className="shrink-0 text-[13px] text-mute hover:text-ink"

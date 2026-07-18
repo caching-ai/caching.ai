@@ -2,7 +2,7 @@ import type { Dict } from "./en";
 
 export const zh: Dict = {
   meta: {
-    title: "Caching.ai - AI 缓存自动管理",
+    title: "AI 成本省 90% — Caching.ai",
     description:
       "面向 Anthropic、OpenAI、Gemini 的即插即用代理：保护、保温并计量你的提示词缓存 — 让你本就有资格享受的 90% 折扣真正落到账单上。",
   },

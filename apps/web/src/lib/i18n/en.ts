@@ -1,7 +1,7 @@
 // Canonical dictionary — every locale must match this shape.
 export const en = {
   meta: {
-    title: "Caching.ai - Automatic AI Cache Management",
+    title: "Cut AI costs 90% — Caching.ai",
     description:
       "Drop-in proxy for Anthropic, OpenAI, and Gemini that protects, warms, and measures your prompt cache — so the 90% discount you already qualify for actually shows up on your bill.",
   },
@@ -170,7 +170,7 @@ export const en = {
   oss: {
     eyebrow: "OPEN SOURCE",
     title: "The code is all public.\nRun it yourself, or let us run it for you.",
-    sub: "Caching.ai's core is open source (Apache-2.0). Self-host the exact same proxy and console on your own infrastructure — or use the cloud and never think about servers.",
+    sub: "Caching.ai's core is open source (Apache-2.0). Run the exact same proxy and console on your own infrastructure — or use the cloud and never think about servers.",
     commonT: "Both, identical",
     common: ["Proxy, auto cache_control & cache warming", "Cache-breaker detection & diagnostics", "Dashboard & key console"],
     cloudT: "Cloud only",

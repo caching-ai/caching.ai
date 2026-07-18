@@ -3,6 +3,7 @@ import LangSelector from "@/components/LangSelector";
 import CopyCode from "@/components/CopyCode";
 import { getLocale } from "@/lib/i18n/server";
 import { getDict } from "@/lib/i18n/shared";
+import { IconTerminal } from "@/components/icons";
 
 const PROXY = process.env.NEXT_PUBLIC_PROXY_URL ?? "https://proxy.caching.ai";
 
@@ -77,7 +78,10 @@ client.chat.completions.create(model="grok-4.5", messages=[...])`}</Code>
           <p className="mt-2 text-body-mid">{t.connectB}</p>
           {/* the fastest path: let the user's own agent do the setup */}
           <div className="mt-5 rounded-card border border-accent-purple/40 bg-accent-purple/[0.05] p-5">
-            <div className="text-[15.5px] font-semibold text-ink">🤖 {t.connectAgentT}</div>
+            <div className="flex items-center gap-2 text-[15.5px] font-semibold text-ink">
+              <IconTerminal size={17} className="shrink-0 text-accent-purple" />
+              {t.connectAgentT}
+            </div>
             <p className="mt-1 text-[14px] leading-relaxed text-body-mid">{t.connectAgentB}</p>
             <div className="mt-3">
               <Code>{`Set up the caching.ai proxy for my AI tools.

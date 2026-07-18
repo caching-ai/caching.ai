@@ -7,6 +7,7 @@ import { useConfirm } from "./ConfirmDialog";
 import { useFx } from "@/lib/fx";
 import CacheVisualGuide from "./CacheVisualGuide";
 import OnboardingChecklist from "./OnboardingChecklist";
+import { IconTerminal, IconAuto, IconFlame, IconChat } from "./icons";
 
 interface KeyRow {
   id: number;
@@ -151,7 +152,10 @@ function AgentHandoff({ ck }: { ck: string }) {
   const text = agentPrompt(ck);
   return (
     <div className="mt-5 rounded-card border border-accent-purple/40 bg-accent-purple/[0.05] p-5" data-testid="agent-handoff">
-      <div className="text-[15.5px] font-semibold text-ink">🤖 {t.agentTitle}</div>
+      <div className="flex items-center gap-2 text-[15.5px] font-semibold text-ink">
+        <IconTerminal size={17} className="shrink-0 text-accent-purple" />
+        {t.agentTitle}
+      </div>
       <p className="mt-1 text-[14px] leading-relaxed text-body-mid">{t.agentBody}</p>
       <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-btn bg-[#0d0d0d] p-4 font-mono text-[13px] leading-relaxed text-[#e8e8e8]">{text}</pre>
       <button className="btn-secondary mt-3 !py-2 !min-h-[36px] text-[14px]"
@@ -485,7 +489,7 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
                           : { auto_cache_control: false, keepalive_enabled: false, ...(cloud ? { cache_tuning_mode: "manual" } : {}) })} />
                       <span>
                         <span className="inline-flex items-center text-[16px] font-medium text-ink">
-                          🚀 {t.autopilotTitle}
+                          <IconAuto size={15} className="mr-1.5 shrink-0" /> {t.autopilotTitle}
                           <Tip text={tips.autopilot} />
                         </span>
                         <span className="block text-[14px] leading-relaxed text-mute">{t.autopilotBody}</span>
@@ -504,7 +508,7 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
                   new Date(k.keepalive_hold_until) > new Date() && (
                   <div className="ml-7 inline-flex w-fit items-center gap-1.5 rounded-btn bg-accent-green/[0.12] px-2.5 py-1 text-[13px] font-medium text-ink"
                     data-testid="hold-badge">
-                    🔥 {fmt(t.holdActive, {
+                    <IconFlame size={14} className="shrink-0" /> {fmt(t.holdActive, {
                       until: new Date(k.keepalive_hold_until).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                     })}
                   </div>
@@ -647,8 +651,8 @@ export default function KeyManager({ proxyUrl }: { proxyUrl: string }) {
                   </div>
                 )}
                 {k.keepalive_enabled && (
-                  <p className="pl-7 text-[13.5px] leading-relaxed text-mute" data-testid="hold-hint">
-                    💬 {t.holdHint}
+                  <p className="flex items-start gap-1.5 pl-7 text-[13.5px] leading-relaxed text-mute" data-testid="hold-hint">
+                    <IconChat size={14} className="mt-0.5 shrink-0" /> {t.holdHint}
                   </p>
                 )}
                 </div>

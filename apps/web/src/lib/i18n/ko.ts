@@ -2,7 +2,7 @@ import type { Dict } from "./en";
 
 export const ko: Dict = {
   meta: {
-    title: "Caching.ai - AI 캐시 자동 관리",
+    title: "AI 비용 90% 절감 — Caching.ai",
     description:
       "Anthropic·OpenAI·Gemini용 프록시가 프롬프트 캐시를 지키고, 데우고, 계측해요 — 이미 받을 자격이 있는 90% 할인을 청구서에 실제로 반영되게요.",
   },

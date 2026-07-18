@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "./I18nProvider";
 import { useConfirm } from "./ConfirmDialog";
 import Tip from "./Tooltip";
+import { IconPause } from "./icons";
 
 interface Period {
   period_start: string;
@@ -142,8 +143,8 @@ export default function Billing({ tossClientKey }: { tossClientKey: string }) {
   if (!periods) return <p className="text-mute">{t.loading}</p>;
 
   const lockedBanner = locked ? (
-    <div className="rounded-card border border-warn/50 bg-warn/10 p-4 text-[15px] leading-relaxed text-ink" data-testid="billing-locked">
-      ⏸ {t.lockedBanner}
+    <div className="flex items-start gap-2 rounded-card border border-warn/50 bg-warn/10 p-4 text-[15px] leading-relaxed text-ink" data-testid="billing-locked">
+      <IconPause size={15} className="mt-0.5 shrink-0" /> {t.lockedBanner}
     </div>
   ) : null;
 

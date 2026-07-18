@@ -2,7 +2,7 @@ import type { Dict } from "./en";
 
 export const ja: Dict = {
   meta: {
-    title: "Caching.ai - AIキャッシュ自動管理",
+    title: "AIコスト90%削減 — Caching.ai",
     description:
       "Anthropic・OpenAI・Gemini向けプロキシがプロンプトキャッシュを守り、温め、計測 — すでに受ける資格のある90%割引を、実際に請求書へ反映させます。",
   },

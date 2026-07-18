@@ -23,6 +23,7 @@ export default function Footer({ d, locale }: { d: Dict; locale: string }) {
       links: [
         { href: "/docs", label: d.nav.docs },
         { href: "/#pricing", label: f.pricing },
+        { href: "https://github.com/caching-ai/caching.ai", label: "GitHub" },
       ],
     },
     {
@@ -51,13 +52,26 @@ export default function Footer({ d, locale }: { d: Dict; locale: string }) {
           <div key={c.title}>
             <h3 className="text-[15px] font-semibold text-white">{c.title}</h3>
             <ul className="mt-4 flex flex-col gap-3">
-              {c.links.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href} className="text-[15px] text-[#9a9a9a] transition-colors hover:text-white">
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
+              {c.links.map((l) =>
+                l.href.startsWith("http") ? (
+                  <li key={l.href}>
+                    <a
+                      href={l.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[15px] text-[#9a9a9a] transition-colors hover:text-white"
+                    >
+                      {l.label}
+                    </a>
+                  </li>
+                ) : (
+                  <li key={l.href}>
+                    <Link href={l.href} className="text-[15px] text-[#9a9a9a] transition-colors hover:text-white">
+                      {l.label}
+                    </Link>
+                  </li>
+                ),
+              )}
             </ul>
           </div>
         ))}

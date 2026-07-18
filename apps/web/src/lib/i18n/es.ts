@@ -2,7 +2,7 @@ import type { Dict } from "./en";
 
 export const es: Dict = {
   meta: {
-    title: "Caching.ai - Gestión automática de caché de IA",
+    title: "Ahorra 90% en IA — Caching.ai",
     description:
       "Proxy drop-in para Anthropic, OpenAI y Gemini que protege, calienta y mide tu caché de prompts — para que el descuento del 90% que ya te corresponde aparezca de verdad en tu factura.",
   },
@@ -43,7 +43,7 @@ export const es: Dict = {
   },
   bench: {
     eyebrow: "MEDIDO, NO PROMETIDO",
-    title: "Hasta un 90% más barato que llamar directo.\nProbado en la factura.",
+    title: "Hasta un 90% más barato que ir directo.\nProbado en la factura.",
     lead: "10,000+ llamadas reales y facturadas — las mismas cargas de trabajo en directo, ajustadas a mano y vía caching.ai, medidas sobre la factura. El método, el harness y los registros crudos son open source.",
     chartTitle: "Tráfico de soporte con pausas de 6–9 minutos · 12 llamadas · claude-haiku-4.5",
     arms: {
@@ -170,7 +170,7 @@ export const es: Dict = {
   },
   oss: {
     eyebrow: "CÓDIGO ABIERTO",
-    title: "El código es todo público.\nHazlo funcionar tú, o déjanoslo a nosotros.",
+    title: "El código es todo público.\nEjecútalo tú, o déjanoslo a nosotros.",
     sub: "El núcleo de Caching.ai es open source (Apache-2.0). Autoaloja el mismo proxy y consola en tu infraestructura — o usa la nube y olvídate de los servidores.",
     commonT: "Idéntico en ambos",
     common: ["Proxy, cache_control automático y calentamiento", "Detección y diagnóstico de rompedores de caché", "Panel y consola de claves"],
