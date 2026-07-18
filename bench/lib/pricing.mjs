@@ -32,6 +32,7 @@ export const PRICES = {
 };
 
 export const ANTHROPIC_CACHE_WRITE_5M_MULT = 1.25;
+export const ANTHROPIC_CACHE_WRITE_1H_MULT = 2.0;
 export const ANTHROPIC_CACHE_READ_MULT = 0.1;
 
 export function priceFor(provider, model) {
@@ -51,11 +52,17 @@ export function costOf(provider, model, u) {
   const p = priceFor(provider, model);
   const per = p.inputPerMTok / 1e6;
   const perOut = p.outputPerMTok / 1e6;
-  // Anthropic bills cache writes at a 1.25x premium; GPT-5.6+ cache_write_tokens
-  // also bill at 1.25x (per-row writeMult), Gemini reports no write tokens.
+  // Anthropic bills 5m cache writes at 1.25x and 1h writes at 2x (usage
+  // breakdown in cacheWrite1h); GPT-5.6+ cache_write_tokens bill at 1.25x
+  // (per-row writeMult), Gemini reports no write tokens.
   const readMult = provider === "anthropic" ? ANTHROPIC_CACHE_READ_MULT : p.cachedInputMult;
   const writeMult = provider === "anthropic" ? ANTHROPIC_CACHE_WRITE_5M_MULT : (p.writeMult ?? 1);
+  const w1h = provider === "anthropic" ? (u.cacheWrite1h || 0) : 0;
+  const w = Math.max(0, (u.cacheWrite || 0) - w1h);
   const inputSideUsd =
-    (u.input || 0) * per + (u.cacheWrite || 0) * per * writeMult + (u.cacheRead || 0) * per * readMult;
+    (u.input || 0) * per +
+    w * per * writeMult +
+    w1h * per * ANTHROPIC_CACHE_WRITE_1H_MULT +
+    (u.cacheRead || 0) * per * readMult;
   return { inputSideUsd, outputUsd: (u.output || 0) * perOut };
 }

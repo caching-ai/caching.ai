@@ -102,13 +102,15 @@ export function callAnthropic({ baseUrl, apiKey, model, system, messages, tools,
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
     body,
     parseUsage(events) {
-      const u = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 };
+      const u = { input: 0, cacheWrite: 0, cacheRead: 0, cacheWrite1h: 0, output: 0 };
       for (const e of events) {
         if (e.type === "message_start" && e.message?.usage) {
           const mu = e.message.usage;
           u.input = mu.input_tokens ?? 0;
           u.cacheWrite = mu.cache_creation_input_tokens ?? 0;
           u.cacheRead = mu.cache_read_input_tokens ?? 0;
+          // per-TTL breakdown: 1h writes bill at 2x, not 1.25x
+          u.cacheWrite1h = mu.cache_creation?.ephemeral_1h_input_tokens ?? 0;
         }
         if (e.type === "message_delta" && e.usage?.output_tokens != null) u.output = e.usage.output_tokens;
       }

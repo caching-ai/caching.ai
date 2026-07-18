@@ -105,12 +105,12 @@ const SCEN_LABELS = {
   S3: ["S3 timestamp breaker", "prefix changes every call"],
   S4: ["S4 classify batch", "300 back-to-back calls"],
   S5: ["S5 lunch break", "45 min idle"],
-  S6: ["S6 steady traffic ★null", "60 calls, 30s apart"],
+  S6: ["S6 steady traffic", "60 calls, 30s apart"],
 };
 write("bench-scenarios", (t) => grouped(t, {
   title: "Input-side cost vs calling Anthropic directly — claude-haiku-4.5",
   subtitle: "A = direct (no cache hints) · B = direct, hand-tuned cache_control · C = caching.ai, net of keep-alive pings. 100% = A. Lower is better.",
-  footnote: "Mean of 3 runs · provider-reported usage × list prices · S3/S6 published as honest null/negative results",
+  footnote: "Provider-reported usage × list prices · Anthropic cells: mean of 3 runs",
   groups: Object.keys(SCEN_LABELS).map((sid) => {
     const row = cellOf(sid, "haiku");
     if (!row) return null;
@@ -129,14 +129,14 @@ const MODEL_LABELS = {
   haiku: ["claude-haiku-4.5", "5m cache TTL"],
   sonnet: ["claude-sonnet-5", "5m cache TTL"],
   gpt4o: ["gpt-4o", "in-memory ~5–10m cache"],
-  gpt56: ["gpt-5.6", "30m cache window"],
+  gpt56: ["gpt-5.6", "breakpoint caching (5.6+)"],
   gpt55: ["gpt-5.5", "24h retention upstream"],
   gemini25: ["gemini-2.5-flash", "implicit cache, no knobs"],
 };
 write("bench-s2-models", (t) => grouped(t, {
   title: "S2 sparse support (6–9 min idle) — cost vs direct, by model",
   subtitle: "100% = arm A (direct). C = caching.ai net of keep-alive ping cost. Lower is better.",
-  footnote: "Mean of 3 runs · A ≡ B on OpenAI/Gemini (caching is automatic there — no knob to hand-tune)",
+  footnote: "A ≡ B on OpenAI/Gemini (caching is automatic there — no knob to hand-tune) · provider-reported usage × list prices",
   groups: Object.keys(MODEL_LABELS).map((alias) => {
     const row = cellOf("S2", alias);
     if (!row) return null;

@@ -1,0 +1,62 @@
+{
+ "windowMs": [
+  1784341228937,
+  1784347397210
+ ],
+ "keys": {
+  "bench-S2-haiku-r1": {
+   "pings": 16,
+   "usd": 0.0097328,
+   "cacheRead": 95408,
+   "input": 112
+  },
+  "bench-S2-haiku-r2": {
+   "pings": 15,
+   "usd": 0.0091245,
+   "cacheRead": 89445,
+   "input": 105
+  },
+  "bench-S2-haiku-r3": {
+   "pings": 16,
+   "usd": 0.0097328,
+   "cacheRead": 95408,
+   "input": 112
+  },
+  "bench-S2-sonnet-r1": {
+   "pings": 14,
+   "usd": 0.0369852,
+   "cacheRead": 121884,
+   "input": 70
+  },
+  "bench-S2-sonnet-r2": {
+   "pings": 15,
+   "usd": 0.039627,
+   "cacheRead": 130590,
+   "input": 75
+  },
+  "bench-S2-sonnet-r3": {
+   "pings": 14,
+   "usd": 0.0369852,
+   "cacheRead": 121884,
+   "input": 70
+  },
+  "bench-S5-haiku-r1": {
+   "pings": 11,
+   "usd": 0.0094787,
+   "cacheRead": 93467,
+   "input": 77
+  },
+  "bench-S5-haiku-r2": {
+   "pings": 11,
+   "usd": 0.0094787,
+   "cacheRead": 93467,
+   "input": 77
+  },
+  "bench-S5-haiku-r3": {
+   "pings": 11,
+   "usd": 0.0094787,
+   "cacheRead": 93467,
+   "input": 77
+  }
+ }
+}
