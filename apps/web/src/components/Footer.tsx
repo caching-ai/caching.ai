@@ -23,6 +23,7 @@ export default function Footer({ d, locale }: { d: Dict; locale: string }) {
       links: [
         { href: "/docs", label: d.nav.docs },
         { href: "/#pricing", label: f.pricing },
+        { href: "/blog", label: f.blog },
         { href: "https://github.com/caching-ai/caching.ai", label: "GitHub" },
       ],
     },

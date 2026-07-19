@@ -190,6 +190,7 @@ export const en = {
     colCompany: "Company",
     console: "Console",
     pricing: "Pricing",
+    blog: "Blog",
     terms: "Terms of Service",
     privacy: "Privacy Policy",
     contact: "Email",

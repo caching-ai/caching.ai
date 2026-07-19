@@ -191,6 +191,7 @@ export const ko: Dict = {
     colCompany: "회사",
     console: "콘솔",
     pricing: "요금",
+    blog: "블로그",
     terms: "이용약관",
     privacy: "개인정보 처리방침",
     contact: "이메일",

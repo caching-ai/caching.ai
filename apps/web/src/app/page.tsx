@@ -16,6 +16,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { getDict } from "@/lib/i18n/shared";
 import { getSession } from "@/lib/auth";
 import { IconBolt, IconFlame, IconSnowflake, IconClock, IconLock, IconKey } from "@/components/icons";
+import JsonLd from "@/components/JsonLd";
+import { ORG_JSONLD, WEBSITE_JSONLD, SOFTWARE_JSONLD, faqJsonLd } from "@/lib/seo";
 
 export default async function Landing() {
   const locale = await getLocale();
@@ -114,6 +116,7 @@ export default async function Landing() {
 
   return (
     <main>
+      <JsonLd data={[ORG_JSONLD, WEBSITE_JSONLD, SOFTWARE_JSONLD, faqJsonLd(d)]} />
       {/* Nav */}
       <nav className="sticky top-0 z-20 border-b border-hairline bg-canvas/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">

@@ -1,11 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import LangSelector from "@/components/LangSelector";
 import CopyCode from "@/components/CopyCode";
 import { getLocale } from "@/lib/i18n/server";
 import { getDict } from "@/lib/i18n/shared";
 import { IconTerminal } from "@/components/icons";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbJsonLd } from "@/lib/seo";
 
 const PROXY = process.env.NEXT_PUBLIC_PROXY_URL ?? "https://proxy.caching.ai";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const t = getDict(locale).docs;
+  return { title: `${t.title} — Caching.ai`, description: t.intro };
+}
 
 export default async function DocsPage() {
   const locale = await getLocale();
@@ -18,6 +27,12 @@ export default async function DocsPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: t.title, path: "/docs" },
+        ])}
+      />
       <div className="flex items-center justify-between gap-4">
         <Link href="/" aria-label="caching.ai">
           <img src="/logo.png" alt="caching.ai" className="h-8 w-auto" />

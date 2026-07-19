@@ -1,0 +1,90 @@
+# Caching.ai — full reference for LLMs
+
+Caching.ai (https://caching.ai) is a drop-in caching-optimization proxy for LLM APIs, built and operated by AI3 Inc. This file is the expanded companion to https://caching.ai/llms.txt.
+
+## The problem it solves
+
+Anthropic, OpenAI, Gemini and Grok all serve repeated prompt prefixes from cache at a fraction of list price (cached input tokens typically cost ~10% of fresh ones). But the discount only applies when the cache is actually hit, and in real traffic it silently fails far more than teams expect:
+
+- Provider prefix caches expire after roughly 5 idle minutes. One short gap between requests and the next call pays full price again.
+- A single changed character at the start of a prompt (a timestamp, a request ID, a reordered tool list) silently breaks the prefix match — every call after it pays 10x.
+- On Anthropic, caching is opt-in per request via cache_control breakpoints; SDK defaults don't set them.
+- On the GPT-5.6 generation, plain SDK traffic stopped getting cross-request prefix caching (0% hits measured); an explicit cache breakpoint and a stable prompt_cache_key are required to restore it.
+- 30–60% of a typical LLM bill is recoverable just by keeping the cache healthy — with no model or code changes.
+
+## What the proxy does
+
+Integration is one base-URL swap (e.g. set ANTHROPIC_BASE_URL to https://proxy.caching.ai and use a Caching.ai key). Your code, SDKs and request shapes stay the same. Streams pass through byte-for-byte with usage read on the fly — no buffering; analytics writes happen after the response is already on its way.
+
+1. Cache Analytics — real hit rate, dollars saved, and dollars wasted on prompts that should have been cached, updated in real time per key and per model.
+2. Cache Guard — automatic cache_control injection on Anthropic where breakpoints are missing, plus cache-breaker detection with likely-cause diagnostics (e.g. "timestamp in system prompt").
+3. Cache Warmer — sends tiny low-cost pings to keep a prefix warm through idle gaps, exactly as long as it is economical and never longer. Opt-in per key; requires storing an encrypted copy of the prompt prefix (AES-256-GCM) because re-sending it is how the cache stays warm.
+4. Auto-Tune — learns each key's real call rhythm (median gap between requests) and picks the cheapest cache settings, e.g. Anthropic's 5-minute vs 1-hour TTL, switching only when the math clearly favors it and showing the evidence.
+5. Teams — organizations with shared workspaces, department/member CSV bulk import, org admin API tokens, budgets and audit logs.
+
+## Measured results (public benchmark)
+
+10,000+ real, billed API calls; the same workloads run direct, hand-tuned, and through the proxy; all costs are the providers' own usage numbers at public list prices. Method, harness and raw logs are open source in the GitHub repo.
+
+- Sparse support traffic (6–9 min idle gaps, claude-haiku-4.5): 67% cheaper than direct — net of all warming pings. Hand-tuning without warming was *more* expensive than doing nothing, because the cache expired in every gap while paying the write premium.
+- 300-call classification batch with a shared prefix: 89% cheaper than SDK defaults.
+- GPT-5.6 steady traffic: SDK defaults measured 0% prefix hits; through the proxy 97.8% hit rate (99.6% verified live), up to 90% saved.
+- Latency: time-to-first-token was equal or better through the proxy (a cache hit skips prompt prefill); the hop itself measured smaller than provider noise.
+
+## Provider support matrix
+
+- Anthropic: analytics + auto cache_control + breaker detection + Cache Warmer + 5m/1h Auto-Tune.
+- OpenAI (incl. GPT-5.6+ and the Responses API): analytics + breaker warnings; on 5.6+ an explicit cache breakpoint and stable prompt_cache_key restore prefix caching. stream_options.include_usage is added when missing so streamed usage is still metered. /v1/completions and /v1/embeddings pass through with metering.
+- Gemini: context-cache metering and savings pricing, unstable-prefix warnings.
+- Grok (xAI): OpenAI wire format on the same endpoint; grok-* model names route automatically; a stable x-grok-conv-id cache-routing header is injected to lift hit rates (never overriding one you send).
+- Where a provider already caches well on its own, traffic passes through at zero overhead — warming pings were measured there and turned off rather than billed.
+
+## Pricing
+
+- Cloud: 20% of verified net savings (savings measured against list price, minus every warming ping spent on your behalf), charged after the month closes. Fees under $5/month are waived, never carried over. If it saves you nothing, you pay nothing. The dashboard shows the exact running fee all month.
+- Self-host: free forever, Apache-2.0, one `docker compose up`. Cloud-only extras: zero ops, Auto-Tune, weekly reports and budget alerts.
+
+## Security & privacy
+
+- Prompt and response bodies are never stored by default — only token counts, model names, latency, status codes, and SHA-256 hashes of prefix blocks.
+- You bring your own provider API keys; they are encrypted at rest with AES-256-GCM, used only to forward your requests, and never logged.
+- Per-account cache isolation; apps authenticate to the proxy with a Caching.ai key (ck_...).
+- No lock-in: if the proxy is ever down, point the base URL back at your provider and you are running direct again.
+
+## Integrations
+
+Copy-paste recipes exist for Claude Code (officially supported via settings/env; plus a Cache Keeper plugin — `/plugin install cache@caching-ai` — that auto-warms the cache after every turn), Codex (native Responses API support), Cline/Roo, and any tool with a custom base-URL field. An agent-executable setup guide lives at https://caching.ai/agent-setup.md.
+
+## FAQ (verbatim from the site)
+
+Q: Do you store my prompts?
+A: No. By default we store only token counts, model names, latency, status codes, and SHA-256 hashes of prefix blocks. The Cache Warmer is opt-in per key and stores an encrypted copy of your prompt prefix (AES-256-GCM) because re-sending it is how the cache stays warm — the trade-off is stated right on the toggle.
+
+Q: How does the proxy authenticate?
+A: You bring your own provider API keys. They're encrypted at rest, used only to forward your requests, and never logged. Your apps call us with a Caching.ai key instead.
+
+Q: What's the latency overhead?
+A: Streaming responses are piped through byte-for-byte with usage read on the fly — no buffering. Analytics writes happen after your response is already on its way.
+
+Q: Which providers are supported?
+A: All four — analytics and cache-breaker detection everywhere, with optimization where it measurably pays: auto cache_control and the Cache Warmer on Anthropic, and on GPT-5.6+ an explicit cache breakpoint plus a stable prompt_cache_key that restore the prefix caching the new models no longer do on their own (verified live: 0% → 99.6% prefix hits). OpenAI, Gemini, and Grok hold their caches upstream — we measured warming pings there and turned them off instead of billing you for them.
+
+Q: What does it cost?
+A: Pricing is performance-based: 20% of what we verifiably save you, charged to your card after each month closes. Fees under $5 are waived. If we save you nothing, you pay nothing.
+
+Q: My provider already caches automatically — why do I need this?
+A: Right — the discount exists. The problem is how often you actually get it. Caches expire after ~5 idle minutes, and a single changed character at the start of your prompt silently breaks them. We keep the cache alive, catch what breaks it, and show you the hit rate you're really getting — most teams find it's far lower than they assumed.
+
+Q: What is Auto-Tune?
+A: It learns each key's real call rhythm — how far apart requests actually arrive — and picks the cheapest cache settings for it: the 5-minute vs 1-hour TTL on Anthropic. OpenAI, Gemini and Grok are managed automatically per model — nothing to configure. It only switches when the math clearly favors it, and shows you the evidence (median gap, sample size, projected savings) on the key.
+
+Q: What happens if Caching.ai is down?
+A: Your requests do pass through us, so an outage on our side would fail your calls — and the fix is the same one-line change you made when you connected: point the base URL back at your provider and you're running direct again. No lock-in, nothing to migrate.
+
+## Links
+
+- Site: https://caching.ai
+- Quickstart: https://caching.ai/docs
+- Blog: https://caching.ai/blog
+- GitHub (Apache-2.0): https://github.com/caching-ai/caching.ai
+- Support: support@caching.ai

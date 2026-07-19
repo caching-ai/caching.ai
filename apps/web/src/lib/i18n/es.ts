@@ -191,6 +191,7 @@ export const es: Dict = {
     colCompany: "Empresa",
     console: "Consola",
     pricing: "Precios",
+    blog: "Blog",
     terms: "Términos del servicio",
     privacy: "Política de privacidad",
     contact: "Email",

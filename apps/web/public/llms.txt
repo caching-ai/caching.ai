@@ -1,0 +1,36 @@
+# Caching.ai
+
+> Caching.ai is a drop-in proxy for the Anthropic, OpenAI, Gemini and Grok APIs that protects, warms, and measures your prompt cache — so the up-to-90% prompt-caching discount providers already offer actually shows up on your bill. Integration is a single base-URL swap; prompts and responses are never stored by default.
+
+Key facts:
+- What it does: cache analytics (real hit rate, dollars saved, dollars wasted), automatic cache_control breakpoint injection, cache-breaker detection (e.g. timestamps in system prompts), and a Cache Warmer that keeps provider prefix caches warm through idle gaps — only while it is economical.
+- Measured results (10,000+ real billed API calls, method and raw logs public): 67% saved on sparse support traffic with 6–9 minute idle gaps; 89% saved on a 300-call shared-prefix batch; on GPT-5.6 (where SDK-default traffic gets 0% prefix hits) the proxy restores 97.8%+ hit rates. Latency is equal or better — a cache hit skips prompt prefill, so first tokens arrive sooner.
+- Providers: Anthropic (auto cache_control + Cache Warmer + 5m/1h TTL Auto-Tune), OpenAI GPT-5.6+ (explicit cache breakpoint + stable prompt_cache_key), Gemini and Grok (metering, savings pricing, breaker warnings; Grok gets a stable cache-routing header).
+- Pricing: performance-based — 20% of verified net savings (warming-ping costs subtracted), billed after each month closes; fees under $5/month are waived. Save nothing, pay nothing.
+- Open source: the core proxy and console are Apache-2.0 — self-host with one `docker compose up`, or use the managed cloud.
+- Privacy: prompt and response bodies are never stored by default; provider keys are encrypted at rest (AES-256-GCM); the opt-in Cache Warmer stores an encrypted copy of the prompt prefix only because re-sending it is how the cache stays warm.
+
+## Docs
+
+- [Quickstart](https://caching.ai/docs): create a key, swap the base URL, done — with copy-paste recipes for Claude Code, Codex, Cline and other tools.
+- [Agent setup guide](https://caching.ai/agent-setup.md): paste-into-your-coding-agent setup script with backups and verification.
+
+## Guides & comparisons
+
+- [What is prompt caching?](https://caching.ai/blog/what-is-prompt-caching): how prefix caching works on Anthropic, OpenAI, Gemini and Grok, and why caches silently miss.
+- [Top 7 LLM caching tools in 2026](https://caching.ai/blog/top-7-llm-caching-tools): honest comparison of prompt-cache optimizers, AI gateways and semantic caches.
+- [How to reduce LLM API costs](https://caching.ai/blog/how-to-reduce-llm-api-costs): seven techniques ranked by effort and payoff.
+- [Prompt caching vs semantic caching](https://caching.ai/blog/prompt-caching-vs-semantic-caching): two different kinds of "LLM cache" — which one you need.
+- [Caching.ai vs Helicone](https://caching.ai/blog/caching-ai-vs-helicone)
+- [Caching.ai vs LiteLLM](https://caching.ai/blog/caching-ai-vs-litellm)
+- [Caching.ai vs Portkey](https://caching.ai/blog/caching-ai-vs-portkey)
+
+## Source
+
+- [GitHub — caching-ai/caching.ai](https://github.com/caching-ai/caching.ai): Apache-2.0 core (proxy, console, benchmark harness and raw logs).
+
+## Optional
+
+- [Full reference for LLMs](https://caching.ai/llms-full.txt): expanded product reference including FAQ answers and integration details.
+- [Privacy policy](https://caching.ai/privacy)
+- [Terms of service](https://caching.ai/terms)

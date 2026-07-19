@@ -191,6 +191,7 @@ export const zh: Dict = {
     colCompany: "公司",
     console: "控制台",
     pricing: "定价",
+    blog: "博客",
     terms: "服务条款",
     privacy: "隐私政策",
     contact: "邮箱",

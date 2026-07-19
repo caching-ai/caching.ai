@@ -191,6 +191,7 @@ export const ja: Dict = {
     colCompany: "会社",
     console: "コンソール",
     pricing: "料金",
+    blog: "ブログ",
     terms: "利用規約",
     privacy: "プライバシーポリシー",
     contact: "メール",

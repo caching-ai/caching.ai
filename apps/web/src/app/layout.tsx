@@ -5,6 +5,8 @@ import { getDict } from "@/lib/i18n/shared";
 import { I18nProvider } from "@/components/I18nProvider";
 import ConfirmProvider from "@/components/ConfirmDialog";
 
+const OG_LOCALE: Record<string, string> = { en: "en_US", ko: "ko_KR", ja: "ja_JP", zh: "zh_CN", es: "es_ES" };
+
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const dict = getDict(locale);
@@ -12,11 +14,39 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL("https://caching.ai"),
     title: dict.meta.title,
     description: dict.meta.description,
+    applicationName: "Caching.ai",
+    category: "technology",
+    keywords: [
+      "AI caching",
+      "LLM cache",
+      "prompt caching",
+      "prompt cache",
+      "LLM cost optimization",
+      "reduce LLM API costs",
+      "Anthropic prompt caching",
+      "OpenAI prompt caching",
+      "Gemini context caching",
+      "cache warming",
+      "LLM proxy",
+      "AI gateway",
+    ],
+    authors: [{ name: "Caching.ai", url: "https://caching.ai" }],
+    creator: "Caching.ai",
+    publisher: "AI3 Inc.",
+    // Relative canonical: resolves to the current route on every page.
+    alternates: { canonical: "./" },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+    },
     openGraph: {
+      type: "website",
       title: dict.meta.title,
       description: dict.meta.description,
-      url: "https://caching.ai",
+      url: "./",
       siteName: "Caching.ai",
+      locale: OG_LOCALE[locale] ?? "en_US",
       images: [{ url: "/og.png", width: 1200, height: 630 }],
     },
     twitter: {
