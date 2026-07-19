@@ -58,6 +58,23 @@ cai:hold 45m          # explicit command — works anywhere, any language
 
 デフォルトは 2 時間で、5 分〜12 時間の範囲に制限されます。すべてのパス——Anthropic Messages、OpenAI chat & responses（Codex）、Gemini、Grok——で動作し、質問した言語（ko/en/ja/es/zh）で応答します。メッセージは短く（60 文字以下）、明確にキャッシュに関する内容である必要があります。実際のプロンプトに見えるものは、そのまま通過します。キープアライブがキーで有効になっている必要があり、日次ウォーミング予算も引き続き適用されます。ホールド中は、コンソールに「Warm hold active · until HH:MM」バッジが表示されます。
 
+### Claude Code なら完全自動 ([`claude-plugin/`](claude-plugin/))
+
+Claude Code を API キーで使っているなら、**Cache Keeper** プラグインが毎ターン
+の終わりにウォームホールドを更新します — 昼休みから戻ってもキャッシュは冷えて
+いません。Claude Code 内で一度だけインストール:
+
+```
+/plugin marketplace add caching-ai/caching.ai
+/plugin install cache@caching-ai
+```
+
+`/cache:setup` は新しいマシンの接続（設定のバックアップ + 検証呼び出し）を行い、
+`/cache:hold 8h` は長めの離席を、`/cache:status` は現在の状態を表示します。
+settings の `env` ブロックで `CACHING_AUTO_HOLD`（"4h"、最大 12 時間、"off"）を
+設定すると自動ホールドの長さを変更でき、セルフホストは `CACHING_PROXY_URL` で
+自分のプロキシを指定します。
+
 ## クラウド vs. セルフホスト
 
 | | **Caching.ai Cloud** | **セルフホスト** |

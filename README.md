@@ -87,6 +87,23 @@ passes through untouched. Keep-alive must be enabled on the key, and the
 daily warming budget still applies. The console shows a
 "Warm hold active · until HH:MM" badge while it lasts.
 
+### Claude Code: fully automatic ([`claude-plugin/`](claude-plugin/))
+
+Using Claude Code on an API key? The **Cache Keeper** plugin renews a warm
+hold after every turn — stepping away for lunch no longer means coming back
+to a cold cache. Install once, inside Claude Code:
+
+```
+/plugin marketplace add caching-ai/caching.ai
+/plugin install cache@caching-ai
+```
+
+`/cache:setup` connects a fresh machine (settings backup + verification call),
+`/cache:hold 8h` covers longer breaks, `/cache:status` shows what's active.
+Set `CACHING_AUTO_HOLD` ("4h", max 12h, "off") in the settings `env` block to
+tune the automatic window; self-hosters point `CACHING_PROXY_URL` at their own
+proxy.
+
 ## Cloud vs. self-host
 
 | | **Caching.ai Cloud** | **Self-host** |

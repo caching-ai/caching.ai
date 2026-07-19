@@ -709,6 +709,7 @@ export const es: Dict = {
         "Presupuesto diario duro por clave; cada señal de calentamiento queda medida en tu panel",
         "Opt-in por clave, prefijo cifrado (AES-256-GCM)",
         "¿Te ausentas? Escribe «mantén mi caché caliente 2 horas» en el chat — el proxy responde por sí mismo (nada llega a la IA) y mantiene el calentamiento, en 5 idiomas",
+        "¿Claude Code? Un plugin lo hace totalmente automático: cada turno renueva en silencio una retención de 2 horas — la comida ya nunca te cuesta una caché fría",
       ],
     },
     adaptive: {
@@ -770,7 +771,7 @@ export const es: Dict = {
     connectAgentT: "Lo más rápido: que lo configure tu agente",
     connectAgentB: "Pega esto en Claude Code, Codex o cualquier agente (cambia la clave). Sigue nuestra guía con backups, diffs y una llamada final de verificación.",
     connectNotes: {
-      claudeCode: "Soportado oficialmente vía settings o variables de entorno. La primera ejecución interactiva pide aprobar la clave personalizada una vez.",
+      claudeCode: "Soportado oficialmente vía settings o variables de entorno. La primera ejecución interactiva pide aprobar la clave personalizada una vez. Después instala el plugin Cache Keeper (abajo) y tu caché se mantiene caliente entre sesiones automáticamente.",
       codex: "Codex habla la Responses API — el proxy la soporta de forma nativa, así que funciona sin más.",
       cline: "Ambas extensiones tienen campo oficial de base URL personalizada por proveedor.",
       aider: "Los modelos de ruta OpenAI necesitan el prefijo openai/. Para Anthropic pon la URL RAÍZ — litellm añade /v1/messages por sí solo.",
@@ -802,6 +803,15 @@ export const es: Dict = {
       "Keep-Alive debe estar activado en la clave y tu presupuesto diario sigue aplicándose; la consola muestra «Retención activa · hasta HH:MM» mientras dura",
     ],
     holdNote: "El mensaje debe ser corto (≤ 60 caracteres) y claramente sobre la caché — cualquier cosa que parezca una petición real de código va directa al modelo, sin tocar.",
+    keeperT: "Claude Code: totalmente automático con el plugin Cache Keeper",
+    keeperB: "Instálalo una vez y tu caché sobrevive a la comida, las reuniones y las pausas largas: al final de cada turno el plugin renueva en silencio una retención caliente (2 horas por defecto), así que volver nunca vuelve a costar una reescritura de caché fría. El comando lo responde el propio proxy — cero tokens — y el gasto de calentamiento siempre se mantiene dentro del presupuesto diario de la clave.",
+    keeperBullets: [
+      "Solo actúa en sesiones que realmente pasan por el proxy con una clave API — en cualquier otro entorno el plugin no hace nada y no cuesta nada",
+      "Elige tu ventana: CACHING_AUTO_HOLD en el bloque env de settings (“4h”, hasta 12 h; “off” lo desactiva) — o /cache:hold 8h antes de una pausa larga",
+      "/cache:setup conecta una máquina nueva de principio a fin: settings con copia de seguridad, env fusionado y una llamada real de verificación",
+      "Solo Anthropic, por medición — los demás proveedores retienen su caché aguas arriba el tiempo suficiente como para que los pings solo quemen presupuesto; Codex ni siquiera necesita calentamiento",
+    ],
+    keeperNote: "Código abierto como todo lo demás — el plugin vive en el mismo repositorio de GitHub (claude-plugin/). ¿Self-hosting? Apúntalo a tu propio proxy con CACHING_PROXY_URL.",
     selfHostNote: "¿Self-host? Los endpoints de operación (healthz · readyz · métricas Prometheus) y todas las variables de entorno están en el README de GitHub.",
     verifyT: "Verifica que funciona",
     verifyB: "La respuesta es idéntica byte a byte a la de tu proveedor. Repite la misma llamada dos veces y comprueba usage.cache_read_input_tokens — y tu panel.",

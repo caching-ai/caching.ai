@@ -708,6 +708,7 @@ export const en = {
         "Hard daily budget per key; every ping is metered on your dashboard",
         "Opt-in per key, prefix stored encrypted (AES-256-GCM)",
         "Stepping away? Say “keep my cache warm for 2 hours” in chat — the proxy answers by itself (nothing reaches the AI) and holds warming, in 5 languages",
+        "On Claude Code, one plugin makes it fully automatic: every turn silently renews a 2-hour hold, so lunch never costs you a cold cache again",
       ],
     },
     adaptive: {
@@ -769,7 +770,7 @@ export const en = {
     connectAgentT: "Fastest: let your agent set it up",
     connectAgentB: "Paste this into Claude Code, Codex, or any coding agent (replace the key). It follows our setup guide with backups, diffs, and a final verification call.",
     connectNotes: {
-      claudeCode: "Officially supported via settings or env vars. First interactive run asks you to approve the custom key once.",
+      claudeCode: "Officially supported via settings or env vars. First interactive run asks you to approve the custom key once. Then add the Cache Keeper plugin (below) and your cache stays warm between sessions automatically.",
       codex: "Codex speaks the Responses API — the proxy supports it natively, so this just works.",
       cline: "Both extensions have an official custom-base-URL field per provider.",
       aider: "OpenAI-path models need the openai/ prefix. For Anthropic, pass the ROOT url — litellm appends /v1/messages by itself.",
@@ -801,6 +802,15 @@ export const en = {
       "The Cache Warmer must be on for the key and your daily warming budget still applies; the console shows a “Warm hold active · until HH:MM” badge while it lasts",
     ],
     holdNote: "The message has to be short (≤ 60 characters) and clearly about the cache — anything that looks like a real coding request goes straight to the model, untouched.",
+    keeperT: "Claude Code: fully automatic with the Cache Keeper plugin",
+    keeperB: "Install once and your cache survives lunch, meetings, and long breaks: after every turn the plugin silently renews a warm hold (2 hours by default), so coming back never means paying a cold-cache re-write. The hold command is answered at the proxy — zero tokens — and warming spend always stays within the key's daily budget.",
+    keeperBullets: [
+      "Runs only in sessions actually routed through the proxy on an API key — anywhere else the plugin quietly does nothing and costs nothing",
+      "Pick your window: CACHING_AUTO_HOLD in the settings env block (“4h”, up to 12h; “off” disables) — or /cache:hold 8h any time before a longer break",
+      "/cache:setup connects a fresh machine end-to-end: settings backed up, env merged, then a real verification call",
+      "Anthropic-only, by measurement — other providers hold their caches upstream long enough that pings would only burn budget, so Codex needs no warming in the first place",
+    ],
+    keeperNote: "Open source like everything else — the plugin lives in the same GitHub repo (claude-plugin/). Self-hosting? Point it at your own proxy with CACHING_PROXY_URL.",
     selfHostNote: "Self-hosting? Ops endpoints (healthz · readyz · Prometheus metrics) and every environment variable are covered in the GitHub README.",
     verifyT: "Verify it works",
     verifyB: "The response is byte-identical to your provider's. Repeat the same call twice and check usage.cache_read_input_tokens — and your dashboard.",

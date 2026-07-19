@@ -1,0 +1,12 @@
+{
+  "name": "cache",
+  "displayName": "Caching.ai Cache Keeper",
+  "version": "0.1.0",
+  "description": "Keeps your Anthropic prompt cache warm through the caching.ai proxy. After every turn it silently renews a warm hold (default 2h, configurable, max 12h), so stepping away doesn't cost you a cold cache re-write. Also ships /cache:hold, /cache:status and /cache:setup.",
+  "author": { "name": "caching.ai", "url": "https://caching.ai" },
+  "homepage": "https://caching.ai/docs",
+  "repository": "https://github.com/caching-ai/caching.ai",
+  "license": "Apache-2.0",
+  "keywords": ["cache", "prompt-caching", "anthropic", "cost"],
+  "hooks": "./hooks/hooks.json"
+}

@@ -110,7 +110,11 @@ client.chat.completions.create(model="grok-4.5", messages=[...])`}</Code>
   }
 }
 # or just: export ANTHROPIC_BASE_URL="${PROXY}"
-#          export ANTHROPIC_AUTH_TOKEN="ck_your_key_here"`,
+#          export ANTHROPIC_AUTH_TOKEN="ck_your_key_here"
+
+# recommended: the Cache Keeper plugin (auto warm-hold — see below)
+/plugin marketplace add caching-ai/caching.ai
+/plugin install cache@caching-ai`,
               },
               {
                 name: "OpenAI Codex CLI",
@@ -275,6 +279,29 @@ cai:hold 45m   # explicit command — works anywhere, any language
             ))}
           </ul>
           <p className="mt-3 text-[14px] text-mute">{t.holdNote}</p>
+        </li>
+
+        <li id="cache-keeper">
+          <h2 className="text-display-md text-ink">{t.keeperT}</h2>
+          <p className="mt-2 text-body-mid">{t.keeperB}</p>
+          <div className="mt-4">
+            <Code>{`# inside Claude Code — install once
+/plugin marketplace add caching-ai/caching.ai
+/plugin install cache@caching-ai
+
+# not routed through the proxy yet? the plugin sets everything up
+/cache:setup
+
+# manual controls
+/cache:hold 8h     # hold the cache warm for a longer break
+/cache:status      # routing, key, auto-hold, last hold`}</Code>
+          </div>
+          <ul className="mt-3 flex list-disc flex-col gap-2 pl-5 text-body-mid">
+            {t.keeperBullets.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[14px] text-mute">{t.keeperNote}</p>
         </li>
 
         <li>

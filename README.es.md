@@ -94,6 +94,23 @@ debe estar habilitado en la clave, y el presupuesto diario de calentamiento
 sigue aplicando. La consola muestra una insignia
 "Warm hold active · until HH:MM" mientras dura.
 
+### Claude Code: totalmente automático ([`claude-plugin/`](claude-plugin/))
+
+¿Usas Claude Code con una clave API? El plugin **Cache Keeper** renueva una
+retención caliente al final de cada turno — irte a comer ya no significa
+volver a una caché fría. Se instala una vez, dentro de Claude Code:
+
+```
+/plugin marketplace add caching-ai/caching.ai
+/plugin install cache@caching-ai
+```
+
+`/cache:setup` conecta una máquina nueva (copia de seguridad de settings +
+llamada de verificación), `/cache:hold 8h` cubre pausas largas y
+`/cache:status` muestra el estado. Ajusta `CACHING_AUTO_HOLD` ("4h", máx. 12 h,
+"off") en el bloque `env` de settings; los self-hosters apuntan
+`CACHING_PROXY_URL` a su propio proxy.
+
 ## Cloud vs. autoalojamiento
 
 | | **Caching.ai Cloud** | **Autoalojado** |

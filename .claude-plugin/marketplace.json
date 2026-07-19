@@ -1,0 +1,21 @@
+{
+  "name": "caching-ai",
+  "owner": {
+    "name": "caching.ai",
+    "url": "https://caching.ai"
+  },
+  "description": "Official caching.ai plugins — keep your provider-side prompt cache warm automatically from Claude Code.",
+  "plugins": [
+    {
+      "name": "cache",
+      "source": "./claude-plugin",
+      "description": "Auto cache keeper for the caching.ai proxy: renews a warm hold after every turn so your cache survives lunch, meetings, and long breaks. Adds /cache:hold, /cache:status, /cache:setup.",
+      "version": "0.1.0",
+      "author": { "name": "caching.ai", "url": "https://caching.ai" },
+      "homepage": "https://caching.ai/docs",
+      "repository": "https://github.com/caching-ai/caching.ai",
+      "category": "productivity",
+      "tags": ["cache", "cost", "anthropic", "proxy"]
+    }
+  ]
+}

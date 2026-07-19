@@ -709,6 +709,7 @@ export const zh: Dict = {
         "每个密钥有每日预算硬上限，每次信号都计入仪表盘",
         "按密钥自愿开启，前缀以 AES-256-GCM 加密保存",
         "要离开一会儿？在聊天里说「帮我保温缓存 2 小时」— 代理自己作答（不会发给 AI），并在该时段内守住保温。支持 5 种语言",
+        "用 Claude Code？一个插件全自动 — 每轮对话结束都静静续上 2 小时锁定，午饭再也不会让缓存变冷",
       ],
     },
     adaptive: {
@@ -770,7 +771,7 @@ export const zh: Dict = {
     connectAgentT: "最快的方式：让智能体来配",
     connectAgentB: "把这段粘贴到 Claude Code、Codex 等智能体（换成你的密钥）。它会按我们的指南完成备份、diff 和最终验证调用。",
     connectNotes: {
-      claudeCode: "通过设置文件或环境变量官方支持。第一次交互式运行会请求你确认一次自定义密钥。",
+      claudeCode: "通过设置文件或环境变量官方支持。第一次交互式运行会请求你确认一次自定义密钥。接着安装下方的缓存保温插件，会话之间缓存也会自动保持温热。",
       codex: "Codex 走 Responses API — 代理原生支持，直接可用。",
       cline: "两个扩展都为每个服务商官方提供自定义 base URL 字段。",
       aider: "OpenAI 路径的模型需要 openai/ 前缀。Anthropic 只填根 URL — litellm 会自动拼上 /v1/messages。",
@@ -802,6 +803,15 @@ export const zh: Dict = {
       "前提是该密钥已开启保温，且每日预算照常生效；锁定期间控制台会显示「保温锁定中 · 直到 HH:MM」徽章",
     ],
     holdNote: "消息要短（60 个字符以内）且明显在说缓存 — 看起来像真正编码请求的内容会原样发给模型。",
+    keeperT: "Claude Code：装上缓存保温插件，全程自动",
+    keeperB: "安装一次，午饭、开会、长时间离开都不怕：每一轮对话结束时，插件都会静静续上一次保温锁定（默认 2 小时），回来时再也不用为冷缓存重写付费。锁定命令由代理自己应答 — 零 token — 保温支出也始终控制在密钥的每日预算内。",
+    keeperBullets: [
+      "只在通过 API 密钥走代理的会话中生效 — 其他环境下插件安静地什么都不做，也不产生费用",
+      "时长随你定：在 settings 的 env 里设 CACHING_AUTO_HOLD（“4h”，最长 12 小时，“off”关闭）— 离开更久就随时 /cache:hold 8h",
+      "/cache:setup 一条命令搞定新机器接入：备份设置、合并 env、再做一次真实验证调用",
+      "基于实测仅限 Anthropic — 其他提供商的缓存在上游保留得足够久，ping 只会白烧预算，Codex 本来就不需要保温",
+    ],
+    keeperNote: "和其他一切一样开源 — 插件就在同一个 GitHub 仓库（claude-plugin/）里。自托管的话，用 CACHING_PROXY_URL 指向你自己的代理即可。",
     selfHostNote: "在自托管？运维端点（healthz·readyz·Prometheus 指标）与环境变量都整理在 GitHub README 里。",
     verifyT: "验证生效",
     verifyB: "响应与服务商原始响应逐字节一致。重复同一调用两次，检查 usage.cache_read_input_tokens — 以及你的仪表盘。",

@@ -59,6 +59,23 @@ cai:hold 45m          # explicit command — works anywhere, any language
 
 기본값은 2시간이고, 5분 – 12시간 범위로 제한돼요. 모든 경로에서 동작해요 — Anthropic Messages, OpenAI chat & responses(Codex), Gemini, Grok — 그리고 질문한 언어(ko/en/ja/es/zh)로 답해줘요. 메시지는 짧아야 하고(60자 이하) 캐시에 관한 내용이라는 게 분명해야 해요. 실제 프롬프트처럼 보이는 건 전부 그대로 통과시켜요. 키에 keep-alive가 켜져 있어야 하고, 일일 워머 예산도 그대로 적용돼요. 홀드가 유지되는 동안 콘솔에는 "Warm hold active · until HH:MM" 배지가 표시돼요.
 
+### Claude Code는 완전 자동 ([`claude-plugin/`](claude-plugin/))
+
+Claude Code를 API 키로 쓰신다면 **캐시 키퍼** 플러그인이 매 턴이 끝날 때마다
+워밍 홀드를 갱신해줘요 — 점심 먹고 와도 캐시가 식어 있지 않아요. Claude Code
+안에서 한 번만 설치하면 돼요:
+
+```
+/plugin marketplace add caching-ai/caching.ai
+/plugin install cache@caching-ai
+```
+
+`/cache:setup`은 새 컴퓨터 연결(설정 백업 + 검증 호출)을 해주고,
+`/cache:hold 8h`는 더 긴 자리 비움을, `/cache:status`는 현재 상태를 보여줘요.
+설정 `env` 블록의 `CACHING_AUTO_HOLD`("4h", 최대 12시간, "off")로 자동 홀드
+시간을 바꿀 수 있고, 셀프호스트는 `CACHING_PROXY_URL`로 자기 프록시를
+가리키면 돼요.
+
 ## Cloud vs. 셀프호스트
 
 | | **Caching.ai Cloud** | **셀프호스트** |

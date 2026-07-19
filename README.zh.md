@@ -85,6 +85,21 @@ Messages、OpenAI chat 与 responses（Codex）、Gemini、Grok——并以你�
 保活功能，且每日预热预算仍然有效。保温生效期间，控制台会显示
 "Warm hold active · until HH:MM" 徽章。
 
+### Claude Code 全自动 ([`claude-plugin/`](claude-plugin/))
+
+用 API 密钥跑 Claude Code？**Cache Keeper** 插件会在每轮对话结束时自动续上
+保温锁定 — 吃个午饭回来，缓存也不会冷。只需在 Claude Code 里安装一次：
+
+```
+/plugin marketplace add caching-ai/caching.ai
+/plugin install cache@caching-ai
+```
+
+`/cache:setup` 负责新机器接入（备份设置 + 验证调用），`/cache:hold 8h` 应对
+更长的离开，`/cache:status` 查看当前状态。在 settings 的 `env` 块里设
+`CACHING_AUTO_HOLD`（"4h"，最长 12 小时，"off" 关闭）可调整自动锁定时长；
+自托管用 `CACHING_PROXY_URL` 指向自己的代理。
+
 ## 云端 vs. 自托管
 
 | | **Caching.ai Cloud** | **自托管** |
