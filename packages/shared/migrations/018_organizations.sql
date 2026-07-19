@@ -1,6 +1,6 @@
 -- caching.ai for Teams: organizations, membership, invites, org BYOK,
--- policy tiers, budgets, audit, org billing. Design follows the onpod
--- Enterprise pattern: members stay ordinary users rows — membership is a set
+-- policy tiers, budgets, audit, org billing. Design follows a shared-tenancy
+-- enterprise pattern: members stay ordinary users rows — membership is a set
 -- of pointer columns — so every existing per-user isolation/billing path
 -- keeps working; org state lives in its own tables, strictly separated from
 -- personal billing and provider keys.

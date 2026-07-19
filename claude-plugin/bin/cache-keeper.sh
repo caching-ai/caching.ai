@@ -36,10 +36,17 @@ DEFAULT_HOLD="2h"
 OFFICIAL_HOST="proxy.caching.ai"
 
 # ---- read one env-block value out of the Claude settings files ----
-settings_env() { # $1 = key name
-  local key="$1" f v=""
+# Scope matters for security: project-level settings files
+# ($CLAUDE_PROJECT_DIR/.claude/*) are attacker-controllable — any repo you open
+# can ship one. So secrets (the API key) and the self-host proxy URL are read
+# from $HOME files ONLY. The one project-scoped value we honor is
+# ANTHROPIC_BASE_URL, and only after its host is validated to be exactly the
+# official proxy (see resolve_proxy) — a hostile repo therefore cannot redirect
+# the key anywhere but our own server.
+settings_env() { # $1 = key name, $2 = scope ("home" default | "all")
+  local key="$1" scope="${2:-home}" f v=""
   local files=("$HOME/.claude/settings.json" "$HOME/.claude/settings.local.json")
-  if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  if [ "$scope" = "all" ] && [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
     files+=("$CLAUDE_PROJECT_DIR/.claude/settings.json" "$CLAUDE_PROJECT_DIR/.claude/settings.local.json")
   fi
   for f in "${files[@]}"; do
@@ -62,23 +69,42 @@ except Exception:
   printf '%s' "$v"
 }
 
+# exact hostname out of a URL — scheme, path, query, port and userinfo removed.
+# Used so the host check is a real equality test, not a substring match
+# ("proxy.caching.ai.evil.com" and "evil.com/?x=proxy.caching.ai" must fail).
+url_host() { # $1 = url → bare host, lowercased
+  local u="${1#*://}"   # drop scheme://
+  u="${u%%/*}"          # drop /path…
+  u="${u%%\?*}"         # drop ?query (when there was no path)
+  u="${u##*@}"          # drop any user:pass@
+  u="${u%%:*}"          # drop :port
+  printf '%s' "$u" | tr 'A-Z' 'a-z'
+}
+
 resolve_proxy() {
+  # Self-host override: arbitrary host, but trusted-source only (env or $HOME —
+  # never a project file), so a hostile repo cannot point us at its server.
   local url="${CACHING_PROXY_URL:-}"
-  [ -z "$url" ] && url=$(settings_env CACHING_PROXY_URL)
+  [ -z "$url" ] && url=$(settings_env CACHING_PROXY_URL home)
   if [ -n "$url" ]; then printf '%s' "${url%/}"; return; fi
+  # Otherwise ride ANTHROPIC_BASE_URL (may be project-scoped) but ONLY when its
+  # host is exactly the official proxy — the key is never sent elsewhere.
   url="${ANTHROPIC_BASE_URL:-}"
-  [ -z "$url" ] && url=$(settings_env ANTHROPIC_BASE_URL)
-  case "$url" in
-    *"$OFFICIAL_HOST"*) printf '%s' "${url%/}" ;;
-    *) printf '' ;;  # not routed through caching.ai — do nothing
-  esac
+  [ -z "$url" ] && url=$(settings_env ANTHROPIC_BASE_URL all)
+  if [ "$(url_host "$url")" = "$OFFICIAL_HOST" ]; then
+    printf '%s' "${url%/}"
+  else
+    printf ''  # not routed through caching.ai — do nothing
+  fi
 }
 
 resolve_key() {
+  # Secrets come from the environment or $HOME settings only — a key is
+  # machine-global config and must never be sourced from a project file.
   local k="${ANTHROPIC_AUTH_TOKEN:-}"
   [ -z "$k" ] && k="${ANTHROPIC_API_KEY:-}"
-  [ -z "$k" ] && k=$(settings_env ANTHROPIC_AUTH_TOKEN)
-  [ -z "$k" ] && k=$(settings_env ANTHROPIC_API_KEY)
+  [ -z "$k" ] && k=$(settings_env ANTHROPIC_AUTH_TOKEN home)
+  [ -z "$k" ] && k=$(settings_env ANTHROPIC_API_KEY home)
   printf '%s' "$k"
 }
 

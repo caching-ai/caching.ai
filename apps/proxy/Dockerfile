@@ -2,11 +2,11 @@
 FROM node:22-alpine AS build
 RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
 WORKDIR /repo
-COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/shared/package.json packages/shared/
 COPY ee/adaptive-cache/package.json ee/adaptive-cache/
 COPY apps/proxy/package.json apps/proxy/
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 COPY packages/shared packages/shared
 COPY ee/adaptive-cache ee/adaptive-cache
 COPY apps/proxy apps/proxy

@@ -50,6 +50,11 @@ export async function GET(req: Request) {
       );
       await audit(metaOrg, ws.session, "billing.card_set", label);
     } else {
+      // personal card: the checkout stamped metadata.cai_user_id — require it to
+      // match the logged-in user so a completed session_id can't be replayed to
+      // bind someone else's card to this account.
+      const metaUser = Number(customerObj?.metadata?.cai_user_id ?? NaN);
+      if (!Number.isInteger(metaUser) || metaUser !== ws.session.uid) return fail();
       await db().query(
         `INSERT INTO payment_methods(user_id, psp, stripe_customer_id, stripe_payment_method_id, card_label)
          VALUES($1,'stripe',$2,$3,$4)

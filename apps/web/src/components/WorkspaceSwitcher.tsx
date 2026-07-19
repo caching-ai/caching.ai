@@ -11,8 +11,8 @@ interface OrgInfo {
 }
 
 /**
- * Personal ↔ team workspace switcher (top of the console sidebar, onpod
- * style). Switching sets the workspace cookie server-side, then refreshes —
+ * Personal ↔ team workspace switcher (top of the console sidebar).
+ * Switching sets the workspace cookie server-side, then refreshes —
  * every page and API re-scopes from the verified cookie.
  */
 export default function WorkspaceSwitcher({

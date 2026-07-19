@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getWorkspace } from "@/lib/org";
+import { csvCell as cell } from "@/lib/csv";
 
 const WINDOWS = [7, 30, 90];
 const MAX_ROWS = 10000;
@@ -10,13 +11,6 @@ const HEADER = [
   "input_tokens", "output_tokens", "cache_read_tokens", "cache_creation_tokens",
   "cost_usd", "saved_usd", "is_keepalive", "cache_breaker_detected",
 ];
-
-// Cells are numbers, ISO dates, booleans, or model/provider slugs — quoting
-// covers the odd model name with a comma; nothing here can start with =+-@.
-const cell = (v: unknown) => {
-  const s = v == null ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
 
 /** Raw request log download (per-request rows, newest first, capped). */
 export async function GET(req: NextRequest) {

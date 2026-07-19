@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireOrgAdmin } from "@/lib/org";
+import { csvCell as cell } from "@/lib/csv";
 
 const PAGE = 50;
 const CSV_MAX = 10_000;
-
-const cell = (v: unknown) => {
-  const s = v == null ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
 
 /** Audit trail viewer (admin). ?format=csv downloads, ?before=<id> paginates. */
 export async function GET(req: NextRequest) {

@@ -125,6 +125,33 @@ function tooLarge(c: Context): Response | null {
   return null;
 }
 
+class BodyTooLargeError extends Error {}
+
+/** Read + parse a JSON body while enforcing MAX_JSON_BODY_BYTES on the bytes
+ *  actually received. content-length can be omitted (chunked transfer) to slip
+ *  past a header-only check, so we count bytes off the stream and abort once the
+ *  cap is crossed — a valid ck_ key otherwise gets to OOM the shared process. */
+async function readJsonCapped(c: Context, maxBytes = MAX_JSON_BODY_BYTES): Promise<any> {
+  const stream = c.req.raw.body;
+  if (!stream) return {};
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > maxBytes) throw new BodyTooLargeError();
+      chunks.push(value);
+    }
+  } finally {
+    try { await reader.cancel(); } catch { /* already drained/closed */ }
+  }
+  return JSON.parse(Buffer.concat(chunks, total).toString("utf8"));
+}
+
 /** Upstream fetch with a hang guard; maps aborts/refusals to clean errors. */
 async function upstreamFetch(
   doFetch: typeof fetch, url: URL, init: RequestInit, timeoutMs: number
@@ -301,8 +328,11 @@ export function buildApp(deps: AppDeps) {
     if (cap) return cap;
     let body: any;
     try {
-      body = await c.req.json();
-    } catch {
+      body = await readJsonCapped(c);
+    } catch (e) {
+      if (e instanceof BodyTooLargeError) {
+        return jsonError("invalid_request_error", "Request body too large.", 413);
+      }
       return jsonError("invalid_request_error", "Request body must be valid JSON.", 400);
     }
 
@@ -418,8 +448,11 @@ export function buildApp(deps: AppDeps) {
     if (cap) return cap;
     let body: any;
     try {
-      body = await c.req.json();
-    } catch {
+      body = await readJsonCapped(c);
+    } catch (e) {
+      if (e instanceof BodyTooLargeError) {
+        return jsonError("invalid_request_error", "Request body too large.", 413);
+      }
       return jsonError("invalid_request_error", "Request body must be valid JSON.", 400);
     }
 
@@ -596,8 +629,11 @@ export function buildApp(deps: AppDeps) {
 
     let body: any;
     try {
-      body = await c.req.json();
-    } catch {
+      body = await readJsonCapped(c);
+    } catch (e) {
+      if (e instanceof BodyTooLargeError) {
+        return jsonError("invalid_request_error", "Request body too large.", 413);
+      }
       return jsonError("invalid_request_error", "Request body must be valid JSON.", 400);
     }
 

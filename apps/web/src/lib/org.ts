@@ -3,7 +3,7 @@ import { sha256Hex } from "@caching/shared";
 import { db } from "@/lib/db";
 import { getSession, type Session } from "@/lib/auth";
 
-// Workspace resolution (onpod pattern): the cookie is only a HINT — the
+// Workspace resolution: the cookie is only a HINT — the
 // server re-verifies membership from users.org_id on every request and
 // fails closed to the personal workspace.
 
