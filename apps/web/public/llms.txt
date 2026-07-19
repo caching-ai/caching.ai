@@ -18,12 +18,15 @@ Key facts:
 ## Guides & comparisons
 
 - [What is prompt caching?](https://caching.ai/blog/what-is-prompt-caching): how prefix caching works on Anthropic, OpenAI, Gemini and Grok, and why caches silently miss.
+- [Anthropic prompt caching tutorial](https://caching.ai/blog/anthropic-prompt-caching-guide): cache_control breakpoints, 5-minute vs 1-hour TTL math, write premiums, and the mistakes that zero hit rates.
 - [Top 7 LLM caching tools in 2026](https://caching.ai/blog/top-7-llm-caching-tools): honest comparison of prompt-cache optimizers, AI gateways and semantic caches.
 - [How to reduce LLM API costs](https://caching.ai/blog/how-to-reduce-llm-api-costs): seven techniques ranked by effort and payoff.
 - [Prompt caching vs semantic caching](https://caching.ai/blog/prompt-caching-vs-semantic-caching): two different kinds of "LLM cache" — which one you need.
 - [Caching.ai vs Helicone](https://caching.ai/blog/caching-ai-vs-helicone)
 - [Caching.ai vs LiteLLM](https://caching.ai/blog/caching-ai-vs-litellm)
 - [Caching.ai vs Portkey](https://caching.ai/blog/caching-ai-vs-portkey)
+- [Caching.ai vs Cloudflare AI Gateway](https://caching.ai/blog/caching-ai-vs-cloudflare-ai-gateway)
+- [Caching.ai vs OpenRouter](https://caching.ai/blog/caching-ai-vs-openrouter)
 
 ## Source
 

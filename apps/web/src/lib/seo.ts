@@ -72,7 +72,7 @@ export function articleJsonLd(post: BlogPost) {
     inLanguage: "en",
     author: { "@id": `${BASE}/#organization` },
     publisher: { "@id": `${BASE}/#organization` },
-    image: `${BASE}/og.png`,
+    image: `${BASE}/og/blog/${post.slug}.png`,
     mainEntityOfPage: `${BASE}/blog/${post.slug}`,
   };
 }
@@ -81,6 +81,7 @@ export function articleJsonLd(post: BlogPost) {
 export function postMetadata(slug: string): import("next").Metadata {
   const post = BLOG_POSTS.find((p) => p.slug === slug);
   if (!post) throw new Error(`unknown blog post: ${slug}`);
+  const og = `/og/blog/${post.slug}.png`;
   return {
     title: post.title,
     description: post.description,
@@ -92,9 +93,9 @@ export function postMetadata(slug: string): import("next").Metadata {
       siteName: "Caching.ai",
       publishedTime: post.datePublished,
       modifiedTime: post.dateModified,
-      images: [{ url: "/og.png", width: 1200, height: 630 }],
+      images: [{ url: og, width: 1200, height: 630 }],
     },
-    twitter: { card: "summary_large_image", title: post.title, description: post.description },
+    twitter: { card: "summary_large_image", title: post.title, description: post.description, images: [og] },
   };
 }
 

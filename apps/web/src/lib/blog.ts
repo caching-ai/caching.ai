@@ -53,6 +53,16 @@ export const BLOG_POSTS: BlogPost[] = [
     minutes: 7,
   },
   {
+    slug: "anthropic-prompt-caching-guide",
+    title: "Anthropic Prompt Caching Tutorial: cache_control, TTLs, and Real Costs",
+    description:
+      "A practical guide to Claude prompt caching: how cache_control breakpoints work, 5-minute vs 1-hour TTL math, write premiums, common mistakes that zero your hit rate, and how to keep the cache warm.",
+    datePublished: "2026-07-19",
+    dateModified: "2026-07-19",
+    tag: "Guide",
+    minutes: 9,
+  },
+  {
     slug: "caching-ai-vs-helicone",
     title: "Caching.ai vs Helicone: Which One Cuts Your LLM Bill?",
     description:
@@ -77,6 +87,26 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Caching.ai vs Portkey: AI Gateway or Prompt-Cache Optimizer?",
     description:
       "Portkey is a full-featured AI gateway with simple and semantic response caching. Caching.ai is a focused proxy that keeps your provider prompt cache warm. Feature-by-feature comparison for 2026.",
+    datePublished: "2026-07-19",
+    dateModified: "2026-07-19",
+    tag: "Comparison",
+    minutes: 7,
+  },
+  {
+    slug: "caching-ai-vs-cloudflare-ai-gateway",
+    title: "Caching.ai vs Cloudflare AI Gateway: Edge Cache or Prompt-Cache Optimizer?",
+    description:
+      "Cloudflare AI Gateway adds edge response caching, logs and rate limits for free. Caching.ai maximizes the provider-side prompt-cache discount. What each covers, what neither does, and when to combine them.",
+    datePublished: "2026-07-19",
+    dateModified: "2026-07-19",
+    tag: "Comparison",
+    minutes: 7,
+  },
+  {
+    slug: "caching-ai-vs-openrouter",
+    title: "Caching.ai vs OpenRouter: Model Marketplace vs Cache Economics",
+    description:
+      "OpenRouter gives you one API key for hundreds of models. Caching.ai makes the prompt-cache discount actually land on the providers you already use. Different jobs — here's how they compare and compose.",
     datePublished: "2026-07-19",
     dateModified: "2026-07-19",
     tag: "Comparison",
