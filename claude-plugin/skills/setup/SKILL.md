@@ -50,6 +50,25 @@ canonical guide. Safety rules are mandatory.
    renews a warm hold automatically after every turn — stepping away for lunch
    no longer means a cold cache. Longer breaks: `/cache:hold 8h`.
 
+7. Optional shortcut — a bare `/cache` command: plugin skills are always
+   namespaced (`/cache:hold`), so if the user wants to just type `/cache 4h`,
+   offer to create a personal skill at `~/.claude/skills/cache/SKILL.md`
+   (create the directory; don't overwrite an existing skill of that name):
+
+   ```markdown
+   ---
+   name: cache
+   description: Shortcut for the caching.ai warm hold — same as /cache:hold.
+   argument-hint: "[duration — e.g. 4h, 90m, 2시간]"
+   ---
+
+   Invoke the `cache:hold` skill from the Caching.ai Cache Keeper plugin,
+   passing along any arguments the user gave (e.g. "4h"). If that plugin is
+   not installed, tell the user to run:
+   /plugin marketplace add caching-ai/caching.ai
+   /plugin install cache@caching-ai
+   ```
+
 If Anthropic requests fail with 403 mentioning a missing provider key, the
 user still needs to register their Anthropic key at
 https://caching.ai/console/keys.

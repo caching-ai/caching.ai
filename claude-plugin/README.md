@@ -31,6 +31,16 @@ explains the key registration at https://caching.ai/console/keys.
 | `/cache:status` | Show proxy routing, key, auto-hold setting, last hold |
 | `/cache:setup` | Connect this machine to the caching.ai proxy |
 
+Claude Code namespaces every plugin command, so `/cache:hold` is as short as
+a plugin can make it. Want a bare `/cache 4h`? `/cache:setup` offers to add a
+one-line personal skill (`~/.claude/skills/cache/`) that forwards to
+`/cache:hold`.
+
+Once a hold is set, your machine is out of the picture: the warming runs
+**server-side** on the caching.ai cloud, so closing the laptop or dropping
+off the network doesn't end it — the hold keeps the cache warm for its full
+window.
+
 ## Configuration
 
 Set in the `env` block of `~/.claude/settings.json`:
