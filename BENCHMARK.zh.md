@@ -15,6 +15,8 @@ API 调用**（2026-07，proxy v0.10.0）。这里的一切都可以用你自己
 脚本；每个实验组使用独立的 salt token，确保实验组之间绝不共享提供商缓存。
 详情：[`bench/README.zh.md`](bench/README.zh.md)。
 
+**引用数字前请先读这段。** 单一区域（客户端在首尔）。Anthropic 单元是 3 次独立运行的均值，但 GPT-5.6 世代与直通单元是在 proxy v0.10.0 上**每单元只跑 1 次**，请视为单次观测而非分布。价格为 2026-07 的公开标价。下方每个单元都链接到原始 JSONL——欢迎核对我们的算术。
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/bench-scenarios-dark.svg">
   <img alt="Input-side cost of arms A/B/C across scenarios on claude-haiku-4.5" src=".github/assets/bench-scenarios-light.svg" width="820">

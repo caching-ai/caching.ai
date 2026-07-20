@@ -31,7 +31,7 @@
 - **缓存守护** —— 自动注入 `cache_control`（Anthropic）、GPT-5.6+ 缓存修复
   （5.6 一代只在断点处匹配，因此朴素的共享前缀在跨请求时命中率为 0%——
   我们注入显式的 `prompt_cache_breakpoint` 外加一个稳定的
-  `prompt_cache_key`，实测验证前缀命中率从 0% → 99.6%），
+  `prompt_cache_key`，实测前缀命中率 0% → 97.8%，稳定流量 —— 见 [BENCHMARK.zh.md](BENCHMARK.zh.md) S6 单元），
   以及缓存破坏者检测并给出可能的根因
   （时间戳、随机 ID、工具顺序变动）。
 - **保活预热** *（按密钥选择启用，仅限 Anthropic——这是有意为之的设计）* ——

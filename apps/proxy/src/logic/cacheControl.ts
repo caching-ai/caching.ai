@@ -78,7 +78,7 @@ export function injectCacheControl(body: any, model: string, ttl: CacheTtl = "5m
 // suffixes never match (run-20260718: 0% cross-suffix hits over 3,240 calls).
 // The documented remedy — an explicit prompt_cache_breakpoint at the end of
 // the shared prefix plus a STABLE prompt_cache_key — was verified live
-// (probe 2026-07-18): cross-suffix hits went from 0 to 99.6% of the prefix.
+// (bench run-202607-v0100, S6 steady): cross-suffix hits went 0 -> 97.8% of the prefix.
 // https://developers.openai.com/api/docs/guides/prompt-caching
 
 /** gpt-5.6/5.7/…/6+ — the breakpoint-caching era */

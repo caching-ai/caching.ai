@@ -148,7 +148,7 @@ export const es: Dict = {
       },
       {
         q: "¿Qué proveedores están soportados?",
-        a: "Los cuatro — analytics y detección de rompe-cachés en todos, con optimización solo donde está medido que compensa: cache_control automático y el Calentador de caché en Anthropic, y en GPT-5.6+ un breakpoint de caché explícito más un prompt_cache_key estable que restauran el cacheo de prefijos que los nuevos modelos ya no hacen solos (verificado en vivo: 0% → 99,6% de aciertos). OpenAI, Gemini y Grok conservan sus cachés en el propio proveedor — medimos las señales de calentamiento allí y las apagamos en lugar de cobrártelas.",
+        a: "Los cuatro — analytics y detección de rompe-cachés en todos, con optimización solo donde está medido que compensa: cache_control automático y el Calentador de caché en Anthropic, y en GPT-5.6+ un breakpoint de caché explícito más un prompt_cache_key estable que restauran el cacheo de prefijos que los nuevos modelos ya no hacen solos (medido en la celda S6 de nuestro benchmark público: 0% → 97,8% de aciertos en tráfico constante). OpenAI, Gemini y Grok conservan sus cachés en el propio proveedor — medimos las señales de calentamiento allí y las apagamos en lugar de cobrártelas.",
       },
       {
         q: "¿Cuánto cuesta?",
@@ -412,7 +412,7 @@ export const es: Dict = {
       keepaliveTitle: "Motor Keep-Alive",
       budgetFxHint: "≈ {usd} · tipo de cambio actualizado a diario",
       autoProvidersTitle: "Los demás proveedores son automáticos",
-      autoOpenai: "OpenAI — el propio proveedor conserva tu caché (hasta 24 h en modelos pre-5.6). En GPT-5.6+ restauramos el cacheo de prefijos que los nuevos modelos perdieron: breakpoint explícito más clave de caché estable, verificado 0% → 99,6% de aciertos.",
+      autoOpenai: "OpenAI — el propio proveedor conserva tu caché (hasta 24 h en modelos pre-5.6). En GPT-5.6+ restauramos el cacheo de prefijos que los nuevos modelos perdieron: breakpoint explícito más clave de caché estable, medido 0% → 97,8% de aciertos en tráfico constante (celda S6 del benchmark público).",
       autoGemini: "Gemini — cachea implícitamente sin ajustes; nosotros lo medimos y mostramos el ahorro.",
       autoGrok: "Grok — mantenemos las conversaciones idénticas enrutadas a la misma caché por ti.",
       holdActive: "Retención activa · hasta {until}",

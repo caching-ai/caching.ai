@@ -36,7 +36,7 @@ verdad:
   breakpoints, así que los prefijos compartidos ingenuos obtienen 0% de
   aciertos entre peticiones — inyectamos un `prompt_cache_breakpoint`
   explícito más un `prompt_cache_key` ESTABLE, verificado en vivo
-  0% → 99,6% de aciertos de prefijo), y detección de rompedores de caché con
+  0% → 97,8% de aciertos de prefijo en tráfico constante, celda S6 de [BENCHMARK.es.md](BENCHMARK.es.md)), y detección de rompedores de caché con
   la causa raíz probable (timestamps, IDs aleatorios, tools reordenadas).
 - **Calentador de caché (keep-alive)** *(opt-in por clave, solo Anthropic — por
   diseño)* — pings de 1 token recalientan tu prefijo exactamente mientras

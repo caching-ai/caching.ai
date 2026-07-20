@@ -501,7 +501,7 @@ export function buildApp(deps: AppDeps) {
     // retention needs no help. GPT-5.6+ is the opposite: breakpoint-scoped
     // caching yields 0% cross-suffix hits for naive traffic, and injecting an
     // explicit breakpoint + STABLE prefix-derived key restores them (verified
-    // live: 0 → 99.6% of the prefix). Caller-set params always pass through.
+    // bench S6, steady traffic: 0 → 97.8% of the prefix). Caller-set params always pass through.
     // same breaker auto-pause as Anthropic: a changing prefix can't be cached,
     // so 5.6 breakpoints would only buy 1.25x write premiums
     if (!isGrok && key.auto_cache_control && !key.billing_locked && !injectionPaused(key.id, provider, model)) {

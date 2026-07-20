@@ -17,6 +17,8 @@ precios de lista públicos; guiones de conversación fijos; tokens de sal por
 brazo para que los brazos nunca puedan compartir una caché del proveedor.
 Detalles: [`bench/README.es.md`](bench/README.es.md).
 
+**Lee esto antes de citar una cifra.** Región única (cliente en Seúl). Las celdas de Anthropic son la media de 3 ejecuciones independientes; las de la era GPT-5.6 y las de paso directo se midieron en proxy v0.10.0 con **1 ejecución por celda**, así que trátalas como una sola observación, no como una distribución. Los precios son de lista pública a 2026-07. Cada celda enlaza su JSONL en bruto — comprueba nuestras cuentas.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/bench-scenarios-dark.svg">
   <img alt="Input-side cost of arms A/B/C across scenarios on claude-haiku-4.5" src=".github/assets/bench-scenarios-light.svg" width="820">

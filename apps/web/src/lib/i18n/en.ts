@@ -147,7 +147,7 @@ export const en = {
       },
       {
         q: "Which providers are supported?",
-        a: "All four — analytics and cache-breaker detection everywhere, with optimization where it measurably pays: auto cache_control and the Cache Warmer on Anthropic, and on GPT-5.6+ an explicit cache breakpoint plus a stable prompt_cache_key that restore the prefix caching the new models no longer do on their own (verified live: 0% → 99.6% prefix hits). OpenAI, Gemini, and Grok hold their caches upstream — we measured warming pings there and turned them off instead of billing you for them.",
+        a: "All four — analytics and cache-breaker detection everywhere, with optimization where it measurably pays: auto cache_control and the Cache Warmer on Anthropic, and on GPT-5.6+ an explicit cache breakpoint plus a stable prompt_cache_key that restore the prefix caching the new models no longer do on their own (measured 0% → 97.8% prefix hits on steady traffic — S6 cell of our published benchmark). OpenAI, Gemini, and Grok hold their caches upstream — we measured warming pings there and turned them off instead of billing you for them.",
       },
       {
         q: "What does it cost?",
@@ -411,7 +411,7 @@ export const en = {
       keepaliveTitle: "Cache Warmer",
       budgetFxHint: "≈ {usd} · rate refreshed daily",
       autoProvidersTitle: "Other providers are automatic",
-      autoOpenai: "OpenAI — the provider holds your cache upstream (up to 24h on pre-5.6 models). On GPT-5.6+ we restore the prefix caching the new models dropped: an explicit breakpoint plus a stable cache key, verified 0% → 99.6% prefix hits.",
+      autoOpenai: "OpenAI — the provider holds your cache upstream (up to 24h on pre-5.6 models). On GPT-5.6+ we restore the prefix caching the new models dropped: an explicit breakpoint plus a stable cache key, measured 0% → 97.8% prefix hits on steady traffic (S6, published benchmark).",
       autoGemini: "Gemini — caches implicitly with no knobs; we meter it and show the savings.",
       autoGrok: "Grok — we keep identical conversations routed to the same cache for you.",
       holdActive: "Warm hold active · until {until}",

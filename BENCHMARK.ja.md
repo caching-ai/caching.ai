@@ -6,6 +6,8 @@
 
 **アーム。** A = プロバイダーを直接呼び出し、キャッシュヒントなし（SDK デフォルト）。B = 直接呼び出しで、プロキシが配置するのとまったく同じ位置に `cache_control` を手動配置（Anthropic のみ — OpenAI/Gemini/Grok は自動キャッシュのため、そこでは A ≡ B）。C = 同じリクエストを caching.ai 経由で送信し、**キープアライブ ping コストを差し引いた純額**。コストはプロバイダー報告の使用トークン数 × 公開定価。会話スクリプトは固定。アームごとのソルトトークンにより、アーム間でプロバイダーキャッシュを共有することは不可能です。詳細：[`bench/README.ja.md`](bench/README.ja.md)。
 
+**数値を引用する前にお読みください。** 単一リージョンです（クライアントはソウル）。Anthropic セルは独立 3 回の平均ですが、GPT-5.6 世代とパススルーのセルは proxy v0.10.0 で**セルあたり 1 回**の測定のため、分布ではなく単一の観測値として扱ってください。価格は 2026-07 時点の公開定価です。以下の各セルは生の JSONL にリンクしています——計算をご確認ください。
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/bench-scenarios-dark.svg">
   <img alt="Input-side cost of arms A/B/C across scenarios on claude-haiku-4.5" src=".github/assets/bench-scenarios-light.svg" width="820">

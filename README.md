@@ -32,8 +32,8 @@ discount actually land:
 - **Cache guard** — auto `cache_control` injection (Anthropic), GPT-5.6+
   cache restore (the 5.6 generation only matches at breakpoints, so naive
   shared prefixes get 0% cross-request hits — we inject an explicit
-  `prompt_cache_breakpoint` plus a STABLE `prompt_cache_key`, verified live
-  0% → 99.6% prefix hits), and cache-breaker detection with the likely root
+  `prompt_cache_breakpoint` plus a STABLE `prompt_cache_key` — measured
+  0% → 97.8% prefix hits on steady traffic, S6 cell in [BENCHMARK.md](BENCHMARK.md)), and cache-breaker detection with the likely root
   cause (timestamps, random IDs, reordered tools).
 - **Cache Warmer** *(keep-alive; opt-in per key, Anthropic only — by design)* —
   1-token pings re-warm your prefix exactly while re-use is economical (up to

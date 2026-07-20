@@ -69,7 +69,7 @@ export default function Post() {
         at a steep discount. On the GPT-5.6 generation we measured a change: plain SDK traffic stopped getting
         cross-request prefix hits (0% in our benchmark) — restoring caching requires an explicit cache
         breakpoint plus a stable <code>prompt_cache_key</code>. Verified live, that took the same workload from
-        0% to 99.6% prefix hits.
+        0% to 97.8% prefix hits on steady traffic (S6 cell of our published benchmark).
       </p>
       <h3>Google (Gemini)</h3>
       <p>

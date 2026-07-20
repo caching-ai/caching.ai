@@ -6,6 +6,8 @@
 
 **Arm 구성.** A = 프로바이더 직접 호출, 캐시 힌트 없음(SDK 기본값). B = 직접 호출이지만 우리 프록시가 넣을 자리에 정확히 수동으로 `cache_control`을 배치(Anthropic 전용 — OpenAI/Gemini/Grok은 자동 캐싱이라 거기서는 A ≡ B예요). C = 같은 요청을 caching.ai를 통해 보내고, **keep-alive 핑 비용까지 차감한 순비용**이에요. 비용은 프로바이더가 보고한 usage 토큰 × 공개 정가로 계산했고, 고정된 대화 스크립트를 썼으며, arm별 salt 토큰을 넣어 arm끼리 프로바이더 캐시를 절대 공유할 수 없게 했어요. 자세한 내용: [`bench/README.ko.md`](bench/README.ko.md).
 
+**수치를 인용하기 전에 읽어주세요.** 단일 리전이에요(클라이언트는 서울). Anthropic 셀은 독립 3회 실행의 평균이지만, GPT-5.6 세대와 패스스루 셀은 proxy v0.10.0에서 **셀당 1회** 측정이라 분포가 아니라 관측치 하나로 봐주세요. 가격은 2026-07 기준 공개 정가예요. 아래 모든 셀은 raw JSONL로 연결되니 계산을 직접 검증해 주세요.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/bench-scenarios-dark.svg">
   <img alt="Input-side cost of arms A/B/C across scenarios on claude-haiku-4.5" src=".github/assets/bench-scenarios-light.svg" width="820">

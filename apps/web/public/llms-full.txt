@@ -28,7 +28,7 @@ Integration is one base-URL swap (e.g. set ANTHROPIC_BASE_URL to https://proxy.c
 
 - Sparse support traffic (6–9 min idle gaps, claude-haiku-4.5): 67% cheaper than direct — net of all warming pings. Hand-tuning without warming was *more* expensive than doing nothing, because the cache expired in every gap while paying the write premium.
 - 300-call classification batch with a shared prefix: 89% cheaper than SDK defaults.
-- GPT-5.6 steady traffic: SDK defaults measured 0% prefix hits; through the proxy 97.8% hit rate (99.6% verified live), up to 90% saved.
+- GPT-5.6 steady traffic: SDK defaults measured 0% prefix hits; through the proxy 97.8% hit rate (S6 cell, run-202607-v0100), up to 90% saved.
 - Latency: time-to-first-token was equal or better through the proxy (a cache hit skips prompt prefill); the hop itself measured smaller than provider noise.
 
 ## Provider support matrix
@@ -67,7 +67,7 @@ Q: What's the latency overhead?
 A: Streaming responses are piped through byte-for-byte with usage read on the fly — no buffering. Analytics writes happen after your response is already on its way.
 
 Q: Which providers are supported?
-A: All four — analytics and cache-breaker detection everywhere, with optimization where it measurably pays: auto cache_control and the Cache Warmer on Anthropic, and on GPT-5.6+ an explicit cache breakpoint plus a stable prompt_cache_key that restore the prefix caching the new models no longer do on their own (verified live: 0% → 99.6% prefix hits). OpenAI, Gemini, and Grok hold their caches upstream — we measured warming pings there and turned them off instead of billing you for them.
+A: All four — analytics and cache-breaker detection everywhere, with optimization where it measurably pays: auto cache_control and the Cache Warmer on Anthropic, and on GPT-5.6+ an explicit cache breakpoint plus a stable prompt_cache_key that restore the prefix caching the new models no longer do on their own (measured 0% → 97.8% prefix hits on steady traffic — S6 cell of our published benchmark). OpenAI, Gemini, and Grok hold their caches upstream — we measured warming pings there and turned them off instead of billing you for them.
 
 Q: What does it cost?
 A: Pricing is performance-based: 20% of what we verifiably save you, charged to your card after each month closes. Fees under $5 are waived. If we save you nothing, you pay nothing.

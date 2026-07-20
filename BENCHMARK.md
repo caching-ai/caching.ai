@@ -15,6 +15,13 @@ are provider-reported usage tokens × public list prices; fixed conversation
 scripts; per-arm salt tokens so arms can never share a provider cache.
 Details: [`bench/README.md`](bench/README.md).
 
+**Read this before quoting a number.** Single region (client in Seoul).
+Anthropic cells are the mean of 3 independent runs; GPT-5.6-era and
+pass-through cells were measured on proxy v0.10.0 with **1 run per cell**, so
+treat those as a single observation, not a distribution. Prices are public
+list prices as of 2026-07. Every cell below links to raw JSONL — please check
+our arithmetic.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/bench-scenarios-dark.svg">
   <img alt="Input-side cost of arms A/B/C across scenarios on claude-haiku-4.5" src=".github/assets/bench-scenarios-light.svg" width="820">
