@@ -20,6 +20,8 @@ export interface ApiKeyRow {
   keepalive_budget_usd_daily: string;
   anthropic_cache_ttl: "5m" | "1h";
   openai_cache_retention: "default" | "24h";
+  /** enterprise gateway upstream for Anthropic-wire traffic (allowlisted) */
+  upstream_gateway_url: string | null;
 }
 
 // Provider keys resolve per-key override first, then the workspace default:
@@ -95,7 +97,7 @@ export async function findApiKey(pool: pg.Pool, rawKey: string): Promise<ApiKeyR
     const { rows } = await pool.query(
       `SELECT k.id, k.user_id, k.org_id, u.org_department_id, ${PROVIDER_KEY_FALLBACK},
               ${EFFECTIVE_SETTINGS},
-              k.openai_cache_retention
+              k.openai_cache_retention, k.upstream_gateway_url
          FROM api_keys k
          JOIN users u ON u.id = k.user_id
          ${PROVIDER_KEY_JOINS}
@@ -124,6 +126,58 @@ export async function findApiKey(pool: pg.Pool, rawKey: string): Promise<ApiKeyR
 
 export { PROVIDER_KEY_FALLBACK, PROVIDER_KEY_JOINS, EFFECTIVE_SETTINGS, EFFECTIVE_SETTINGS_JOINS };
 
+// ---------- sub-tenants: per-tenant policy overrides on one key ----------
+
+export interface TenantPolicyRow {
+  auto_cache_control: boolean | null;
+  keepalive_enabled: boolean | null;
+  keepalive_budget_usd_daily: string | null;
+  anthropic_cache_ttl: "5m" | "1h" | null;
+  keepalive_max_slots: number | null;
+}
+
+// Same hot-path shape as KEY_CACHE: one DB read per (key, tenant) per TTL,
+// stale-on-error. Misses ARE cached (most tenants never set a policy row —
+// without negative caching every tagged request would add a query).
+const TENANT_CACHE = new Map<string, { row: TenantPolicyRow | null; exp: number }>();
+const TENANT_CACHE_MAX = 50_000;
+
+export function clearTenantPolicyCache() {
+  TENANT_CACHE.clear();
+}
+
+export async function findTenantPolicy(
+  pool: pg.Pool,
+  apiKeyId: number,
+  tenantId: string
+): Promise<TenantPolicyRow | null> {
+  const cacheKey = `${apiKeyId}:${tenantId}`;
+  const hit = TENANT_CACHE.get(cacheKey);
+  const nowMs = Date.now();
+  if (hit && hit.exp > nowMs) return hit.row;
+  try {
+    const { rows } = await pool.query(
+      `SELECT auto_cache_control, keepalive_enabled, keepalive_budget_usd_daily,
+              anthropic_cache_ttl, keepalive_max_slots
+         FROM key_tenant_policies WHERE api_key_id=$1 AND tenant_id=$2`,
+      [apiKeyId, tenantId]
+    );
+    const row: TenantPolicyRow | null = rows[0] ?? null;
+    if (keyCacheTtlMs() > 0) {
+      TENANT_CACHE.delete(cacheKey);
+      if (TENANT_CACHE.size >= TENANT_CACHE_MAX) {
+        const oldest = TENANT_CACHE.keys().next().value;
+        if (oldest !== undefined) TENANT_CACHE.delete(oldest);
+      }
+      TENANT_CACHE.set(cacheKey, { row, exp: nowMs + keyCacheTtlMs() });
+    }
+    return row;
+  } catch (e) {
+    if (hit) return hit.row; // DB blip: serve stale so customer traffic survives
+    throw e;
+  }
+}
+
 export interface CostBreakdown {
   actualUsd: number;
   noCacheUsd: number;
@@ -142,6 +196,8 @@ export interface LogEntry {
   cost: CostBreakdown;
   prefixHashes: BlockHash[] | null;
   breakerDetected: boolean;
+  /** sub-tenant attribution (X-Cache-Tenant); null = untagged */
+  tenantId?: string | null;
 }
 
 export async function insertRequestLog(pool: pg.Pool, e: LogEntry): Promise<void> {
@@ -150,8 +206,9 @@ export async function insertRequestLog(pool: pg.Pool, e: LogEntry): Promise<void
     `INSERT INTO request_logs
        (api_key_id, provider, model, status, latency_ms, is_stream, is_keepalive,
         input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens,
-        cost_usd, no_cache_cost_usd, saved_usd, prefix_block_hashes, cache_breaker_detected)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        cost_usd, no_cache_cost_usd, saved_usd, prefix_block_hashes, cache_breaker_detected,
+        tenant_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
     [
       e.apiKeyId, e.provider, e.model, e.status, e.latencyMs, e.isStream, e.isKeepalive,
       e.usage.input_tokens, e.usage.output_tokens,
@@ -159,6 +216,7 @@ export async function insertRequestLog(pool: pg.Pool, e: LogEntry): Promise<void
       e.cost.actualUsd, e.cost.noCacheUsd, e.cost.savedUsd,
       e.prefixHashes ? JSON.stringify(e.prefixHashes) : null,
       e.breakerDetected,
+      e.tenantId ?? null,
     ]
   );
 }
@@ -167,16 +225,32 @@ export async function lastPrefixHashes(
   pool: pg.Pool,
   apiKeyId: number,
   provider: string,
-  model: string
+  model: string,
+  tenantId: string | null = null
 ): Promise<BlockHash[] | null> {
+  // breaker detection compares consecutive prefixes WITHIN one tenant's
+  // stream — mixing tenants on a shared key would flag every interleave
   const { rows } = await pool.query(
     `SELECT prefix_block_hashes FROM request_logs
       WHERE api_key_id=$1 AND provider=$2 AND model=$3 AND is_keepalive=false
-        AND prefix_block_hashes IS NOT NULL
+        AND prefix_block_hashes IS NOT NULL AND tenant_id IS NOT DISTINCT FROM $4
       ORDER BY ts DESC, id DESC LIMIT 1`,
-    [apiKeyId, provider, model]
+    [apiKeyId, provider, model, tenantId]
   );
   return rows[0]?.prefix_block_hashes ?? null;
+}
+
+export interface KeepaliveSaveOpts {
+  /** '' = the key's own (legacy) slot */
+  tenantId?: string;
+  /** warm-slot id within the tenant (e.g. one per end-user); '' = default */
+  slot?: string;
+  /** per-request X-Cache-Keepalive override, replayed by the sweep */
+  headerKeepalive?: boolean | null;
+  /** custom x-* headers to replay on pings (gateway routing/attribution) */
+  extraHeaders?: Record<string, string> | null;
+  /** prune this tenant's slots beyond N (most recently active kept) */
+  maxSlots?: number;
 }
 
 /** upsert keep-alive state after a real customer request (opt-in keys only) */
@@ -186,22 +260,49 @@ export async function saveKeepaliveState(
   provider: string,
   prefix: object,
   prefixTokenEstimate: number,
-  encryptionKey: string
+  encryptionKey: string,
+  opts: KeepaliveSaveOpts = {}
 ): Promise<void> {
   const plain = JSON.stringify(prefix);
   const enc = encrypt(plain, encryptionKey);
+  const tenantId = opts.tenantId ?? "";
+  const slot = opts.slot ?? "";
   // model is stored in the clear so the sweep can pick the right ping cadence
   // (e.g. GPT-5.6+ 30m windows) without decrypting every prefix
   const model = typeof (prefix as any)?.model === "string" ? (prefix as any).model : "";
+  const encHeaders =
+    opts.extraHeaders && Object.keys(opts.extraHeaders).length > 0
+      ? encrypt(JSON.stringify(opts.extraHeaders), encryptionKey)
+      : null;
   // prefix_sha lets the sweep dedupe warming inside an org: identical prefixes
   // behind the same org provider account share one provider cache entry, so
   // one ping warms it for every member
   await pool.query(
-    `INSERT INTO keepalive_state (api_key_id, provider, encrypted_prefix, model, prefix_token_estimate, prefix_sha, last_request_at)
-     VALUES ($1,$2,$3,$4,$5,$6, now())
-     ON CONFLICT (api_key_id, provider) DO UPDATE
-       SET encrypted_prefix=$3, model=$4, prefix_token_estimate=$5, prefix_sha=$6, last_request_at=now()`,
-    [apiKeyId, provider, enc, model, prefixTokenEstimate, sha256Hex(plain)]
+    `INSERT INTO keepalive_state (api_key_id, provider, tenant_id, slot, encrypted_prefix,
+                                  model, prefix_token_estimate, prefix_sha, header_keepalive,
+                                  encrypted_headers, last_request_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now())
+     ON CONFLICT (api_key_id, provider, tenant_id, slot) DO UPDATE
+       SET encrypted_prefix=$5, model=$6, prefix_token_estimate=$7, prefix_sha=$8,
+           header_keepalive=$9, encrypted_headers=$10, last_request_at=now()`,
+    [apiKeyId, provider, tenantId, slot, enc, model, prefixTokenEstimate, sha256Hex(plain),
+     opts.headerKeepalive ?? null, encHeaders]
   );
+  // slot cap: a tenant only keeps its most recently active N slots warm.
+  // Legacy traffic (tenant '') is a single fixed slot — nothing to prune.
+  if (tenantId !== "") {
+    const max = Math.max(1, Math.min(128, opts.maxSlots ?? TENANT_DEFAULT_MAX_SLOTS));
+    await pool.query(
+      `DELETE FROM keepalive_state
+        WHERE api_key_id=$1 AND provider=$2 AND tenant_id=$3
+          AND slot NOT IN (
+            SELECT slot FROM keepalive_state
+             WHERE api_key_id=$1 AND provider=$2 AND tenant_id=$3
+             ORDER BY last_request_at DESC NULLS LAST LIMIT $4)`,
+      [apiKeyId, provider, tenantId, max]
+    );
+  }
 }
+
+export const TENANT_DEFAULT_MAX_SLOTS = 16;
 

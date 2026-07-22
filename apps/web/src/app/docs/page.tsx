@@ -319,6 +319,45 @@ cai:hold 45m   # explicit command — works anywhere, any language
           <p className="mt-3 text-[14px] text-mute">{t.keeperNote}</p>
         </li>
 
+        <li id="tenants">
+          <h2 className="text-display-md text-ink">{t.tenantsT}</h2>
+          <p className="mt-2 text-body-mid">{t.tenantsB}</p>
+          <div className="mt-4">
+            <Code>{`# tag each request with the end-customer it belongs to — the headers alone work
+curl ${PROXY}/v1/messages \\
+  -H "content-type: application/json" \\
+  -H "x-api-key: ck_your_key_here" \\
+  -H "anthropic-version: 2023-06-01" \\
+  -H "X-Cache-Tenant: acme-corp" \\
+  -H "X-Cache-Warm-Slot: user-42" \\
+  -H "X-Cache-Keepalive: on" \\
+  -d '{
+    "model": "claude-sonnet-4-5",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "..."}]
+  }'`}</Code>
+          </div>
+          <ul className="mt-3 flex list-disc flex-col gap-2 pl-5 text-body-mid">
+            {t.tenantsBullets.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+          <h3 className="mt-6 text-[18px] font-semibold text-ink">{t.tenantsApiT}</h3>
+          <p className="mt-2 text-body-mid">{t.tenantsApiB}</p>
+          <div className="mt-4">
+            <Code>{`# per-tenant policy — partial upsert; null clears a field back to inherit
+curl -X PUT ${PROXY}/admin/v1/tenants/acme-corp \\
+  -H "Authorization: Bearer ck_your_key_here" \\
+  -H "content-type: application/json" \\
+  -d '{"keepalive_enabled": true, "keepalive_budget_usd_daily": 1.0}'
+
+# usage & savings attribution for one tenant
+curl "${PROXY}/admin/v1/tenants/acme-corp/stats?days=7" \\
+  -H "Authorization: Bearer ck_your_key_here"`}</Code>
+          </div>
+          <p className="mt-3 text-[14px] text-mute">{t.tenantsNote}</p>
+        </li>
+
         <li>
           <h2 className="text-display-md text-ink">{t.verifyT}</h2>
           <div className="mt-4">

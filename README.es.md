@@ -50,6 +50,11 @@ verdad:
   sí mismo y mantiene el calentamiento (ver abajo).
 - **Optimizador de prefijos** — mide qué parte de tu prompt cambia entre
   peticiones y te dice cómo arreglarlo.
+- **Subinquilinos** — ¿sirves a muchos clientes finales con una sola clave
+  `ck_`? Etiqueta cada petición con `X-Cache-Tenant` (más `X-Cache-Warm-Slot`,
+  p. ej. uno por usuario final) y obtén política de caché, atribución de uso
+  y ahorro, y slots calientes por inquilino — gestionado programáticamente en
+  `/admin/v1/tenants` con la propia clave. Sin emitir una clave por cliente.
 
 <p align="center">
   <img src=".github/assets/hero-cache-warm.png" alt="A robot keeping the cache flame warm while the cold one costs 10x" width="640">

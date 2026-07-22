@@ -45,6 +45,11 @@ discount actually land:
   in chat — the proxy answers it itself and holds warming (see below).
 - **Prefix optimizer** — measures which part of your prompt changes between
   requests and tells you how to fix it.
+- **Sub-tenants** — serving many end-customers through one `ck_` key? Tag
+  each request with `X-Cache-Tenant` (plus `X-Cache-Warm-Slot`, e.g. one per
+  end-user) and get per-tenant cache policy, usage/savings attribution, and
+  warm slots — managed programmatically at `/admin/v1/tenants` with the key
+  itself. No per-customer key minting.
 
 <p align="center">
   <img src=".github/assets/hero-cache-warm.png" alt="A robot keeping the cache flame warm while the cold one costs 10x" width="640">

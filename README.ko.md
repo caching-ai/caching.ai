@@ -27,6 +27,7 @@
 - **Keep-alive 워머** *(키별 opt-in, Anthropic 전용 — 의도된 설계예요)* — 1토큰 핑으로 재사용이 경제적인 동안만(최대 62.5분) 프리픽스를 다시 데워요. 일일 예산은 직접 정할 수 있어요. 다른 프로바이더들은 업스트림에서 캐시를 스스로 유지해요(직접 측정했어요 — [BENCHMARK.ko.md](BENCHMARK.ko.md)). 그래서 핑이 이득이 안 되는 곳에는 프록시가 예산을 절대 쓰지 않아요. 긴 홀드는 핑 스트림 대신 1h-TTL 쓰기 한 번으로 처리해요.
   잠시 자리를 비우시나요? 채팅에 `"keep my cache warm for 2 hours"`라고 보내면 프록시가 직접 답하고 워머를 유지해줘요(아래 참고).
 - **프리픽스 옵티마이저** — 요청 사이에 프롬프트의 어느 부분이 바뀌는지 측정하고 어떻게 고치면 되는지 알려줘요.
+- **서브테넌트** — `ck_` 키 하나로 여러 고객사를 서빙하나요? 요청마다 `X-Cache-Tenant`(그리고 최종 사용자별로 `X-Cache-Warm-Slot`)만 붙이면 테넌트별 캐시 정책, 사용량·절감액 귀속, 워밍 슬롯이 생겨요 — 관리는 `/admin/v1/tenants`에서 그 키 자체로 프로그래밍 방식으로 해요. 고객마다 키를 새로 만들 필요가 없어요.
 
 <p align="center">
   <img src=".github/assets/hero-cache-warm.png" alt="A robot keeping the cache flame warm while the cold one costs 10x" width="640">

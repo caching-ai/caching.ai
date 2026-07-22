@@ -6,6 +6,8 @@ export interface MockState {
   bodies: any[];
   /** every x-api-key header received */
   keys: string[];
+  /** every full header map received on /v1/messages, in order */
+  headers: Record<string, string>[];
   /** force a status for the next responses (0 = normal) */
   forceStatus: number;
   /** usage to return */
@@ -23,6 +25,7 @@ export function makeMockAnthropic() {
   const state: MockState = {
     bodies: [],
     keys: [],
+    headers: [],
     forceStatus: 0,
     usage: {
       input_tokens: 10,
@@ -39,6 +42,7 @@ export function makeMockAnthropic() {
     const body = await c.req.json();
     state.bodies.push(body);
     state.keys.push(c.req.header("x-api-key") ?? "");
+    state.headers.push({ ...c.req.header() });
 
     if (state.forceStatus === 401) {
       return c.json(

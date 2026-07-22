@@ -14,8 +14,10 @@ const MAX_ENTRIES = 10_000;
 
 const streaks = new Map<string, number>();
 
-const keyOf = (apiKeyId: number, provider: string, model: string) =>
-  `${apiKeyId}:${provider}:${model}`;
+// sub-tenants stream independently through one key — pause per tenant, or a
+// single breaker-y tenant would kill injection for every other tenant
+const keyOf = (apiKeyId: number, provider: string, model: string, tenant = "") =>
+  `${apiKeyId}:${provider}:${model}:${tenant}`;
 
 /** Record one request's breaker outcome (called from the async log path). */
 export function noteBreakerObservation(
@@ -23,9 +25,10 @@ export function noteBreakerObservation(
   provider: string,
   model: string,
   breakerDetected: boolean,
-  cacheReadHit: boolean
+  cacheReadHit: boolean,
+  tenant = ""
 ): void {
-  const k = keyOf(apiKeyId, provider, model);
+  const k = keyOf(apiKeyId, provider, model, tenant);
   if (breakerDetected && !cacheReadHit) {
     if (!streaks.has(k) && streaks.size >= MAX_ENTRIES) {
       const oldest = streaks.keys().next().value;
@@ -38,8 +41,8 @@ export function noteBreakerObservation(
 }
 
 /** true → skip breakpoint/key injection for this key+model right now */
-export function injectionPaused(apiKeyId: number, provider: string, model: string): boolean {
-  return (streaks.get(keyOf(apiKeyId, provider, model)) ?? 0) >= BREAKER_PAUSE_STREAK;
+export function injectionPaused(apiKeyId: number, provider: string, model: string, tenant = ""): boolean {
+  return (streaks.get(keyOf(apiKeyId, provider, model, tenant)) ?? 0) >= BREAKER_PAUSE_STREAK;
 }
 
 /** test hook */

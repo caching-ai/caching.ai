@@ -44,6 +44,11 @@
   ——代理会自行应答并保持预热（见下文）。
 - **前缀优化器** —— 测量你的提示词在请求之间发生变化的部分，
   并告诉你如何修复。
+- **子租户** —— 用一把 `ck_` 密钥服务众多终端客户？给每个请求打上
+  `X-Cache-Tenant` 标签（再加上 `X-Cache-Warm-Slot`，比如每个终端用户一个），
+  即可获得按租户的缓存策略、用量与节省归属以及保温槽位 —— 通过
+  `/admin/v1/tenants` 用这把密钥本身进行程序化管理。无需为每个客户
+  单独发放密钥。
 
 <p align="center">
   <img src=".github/assets/hero-cache-warm.png" alt="A robot keeping the cache flame warm while the cold one costs 10x" width="640">

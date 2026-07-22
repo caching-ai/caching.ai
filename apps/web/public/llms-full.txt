@@ -21,6 +21,7 @@ Integration is one base-URL swap (e.g. set ANTHROPIC_BASE_URL to https://proxy.c
 3. Cache Warmer — sends tiny low-cost pings to keep a prefix warm through idle gaps, exactly as long as it is economical and never longer. Opt-in per key; requires storing an encrypted copy of the prompt prefix (AES-256-GCM) because re-sending it is how the cache stays warm.
 4. Auto-Tune — learns each key's real call rhythm (median gap between requests) and picks the cheapest cache settings, e.g. Anthropic's 5-minute vs 1-hour TTL, switching only when the math clearly favors it and showing the evidence.
 5. Teams — organizations with shared workspaces, department/member CSV bulk import, org admin API tokens, budgets and audit logs.
+6. Sub-tenants — one enterprise ck_ key serving many end-customers, each with its own cache policy, usage/savings attribution and warm slots (see the dedicated section below).
 
 ## Measured results (public benchmark)
 
@@ -38,6 +39,22 @@ Integration is one base-URL swap (e.g. set ANTHROPIC_BASE_URL to https://proxy.c
 - Gemini: context-cache metering and savings pricing, unstable-prefix warnings.
 - Grok (xAI): OpenAI wire format on the same endpoint; grok-* model names route automatically; a stable x-grok-conv-id cache-routing header is injected to lift hit rates (never overriding one you send).
 - Where a provider already caches well on its own, traffic passes through at zero overhead — warming pings were measured there and turned off rather than billed.
+
+## Sub-tenants (platforms & enterprises)
+
+A platform serving many end-customers through one ck_ key tags each request with the customer it belongs to — no provisioning step; the headers alone work:
+
+- X-Cache-Tenant: <id> — which end-customer the request belongs to (1–120 chars: letters, digits, . _ : -). Unlocks per-tenant policy resolution, per-tenant usage/savings attribution, and per-tenant warm slots.
+- X-Cache-Warm-Slot: <id> — a warm slot inside the tenant, e.g. one per end-user. Each slot keeps that user's latest prefix warm; slots are pruned to the most recent N (default 16; per-tenant keepalive_max_slots, 1–128).
+- X-Cache-Keepalive: on|off, X-Cache-Injection: on|off, X-Cache-Ttl: 5m|1h — per-request overrides. Precedence: request header > tenant policy > key setting.
+
+Management API — authenticated with the ck_ key itself (x-api-key or Authorization: Bearer):
+
+- GET /admin/v1/tenants — list tenant policy rows (?limit&after pagination).
+- GET/PUT/DELETE /admin/v1/tenants/{tenant} — PUT is a partial upsert of {auto_cache_control, keepalive_enabled, keepalive_budget_usd_daily, anthropic_cache_ttl, keepalive_max_slots}; null clears a field back to inheriting the key's setting. DELETE offboards the tenant — drops its policy row and stops its warming.
+- GET /admin/v1/tenants/{tenant}/stats?days=7 — requests, warming_pings, input/output tokens, cache read/write tokens, cost_usd, saved_usd.
+
+Budgets stack: a tenant's keepalive_budget_usd_daily caps that tenant's warming pings, while the key-level daily budget still caps the whole key. Warming remains Anthropic-only. Enterprise gateways: GET/PUT/DELETE /admin/v1/gateway sets a per-key upstream gateway URL for Anthropic-wire traffic (operator-approved allowlist only); warming pings follow the gateway and replay the request's custom x-* headers so gateway-side routing and attribution keep working — contact support to have a gateway approved.
 
 ## Pricing
 

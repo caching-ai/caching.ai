@@ -47,12 +47,16 @@ import { noteBreakerObservation, injectionPaused } from "./logic/breakerPause.js
 import { orgBudgetBlocked } from "./logic/orgBudget.js";
 import {
   findApiKey,
+  findTenantPolicy,
   insertRequestLog,
   lastPrefixHashes,
   saveKeepaliveState,
+  TENANT_DEFAULT_MAX_SLOTS,
   type ApiKeyRow,
   type CostBreakdown,
+  type TenantPolicyRow,
 } from "./store.js";
+import { adminRoutes } from "./admin.js";
 
 export interface AppDeps {
   pool: pg.Pool;
@@ -84,6 +88,38 @@ const OPENAI_PATHS = new Set([
   "/v1/completions",
   "/v1/embeddings",
 ]);
+
+// Sub-tenant control headers: consumed by the proxy, never forwarded upstream.
+// X-Cache-Tenant tags the request for policy + attribution; X-Cache-Warm-Slot
+// picks the warm slot inside the tenant (e.g. one per end-user); the rest are
+// stateless per-request policy overrides (they beat the tenant policy row).
+const CONTROL_HEADERS = [
+  "x-cache-tenant",
+  "x-cache-warm-slot",
+  "x-cache-keepalive",
+  "x-cache-injection",
+  "x-cache-ttl",
+] as const;
+const TENANT_ID_RE = /^[A-Za-z0-9._:-]{1,120}$/;
+
+interface TenantContext {
+  tenantId: string | null;
+  slot: string;
+  /** per-request overrides (null = not sent) */
+  injection: boolean | null;
+  keepalive: boolean | null;
+  ttl: "5m" | "1h" | null;
+  policy: TenantPolicyRow | null;
+}
+
+const NO_TENANT: TenantContext = {
+  tenantId: null, slot: "", injection: null, keepalive: null, ttl: null, policy: null,
+};
+
+function parseOnOff(v: string | undefined): boolean | null {
+  const s = v?.trim().toLowerCase();
+  return s === "on" || s === "true" ? true : s === "off" || s === "false" ? false : null;
+}
 
 function jsonError(type: string, message: string, status: number) {
   return new Response(JSON.stringify({ type: "error", error: { type, message } }), {
@@ -177,12 +213,34 @@ function passthroughHeaders(res: Response): Headers {
 
 function forwardHeaders(c: Context, drop: string[] = []): Headers {
   const headers = new Headers();
-  const dropSet = new Set([...HOP_HEADERS, "x-api-key", "authorization", "x-goog-api-key", ...drop]);
+  const dropSet = new Set([
+    ...HOP_HEADERS, "x-api-key", "authorization", "x-goog-api-key",
+    ...CONTROL_HEADERS, ...drop,
+  ]);
   for (const [k, v] of Object.entries(c.req.header())) {
     const lower = k.toLowerCase();
     if (!dropSet.has(lower) && !isEdgeHeader(lower)) headers.set(k, v as string);
   }
   return headers;
+}
+
+/** Custom x-* headers a warming ping must replay so a gateway upstream routes
+ *  and attributes the ping like the live request it keeps warm. Auth, control
+ *  and edge headers never qualify; total size is capped (DB hygiene). */
+function pingReplayHeaders(c: Context): Record<string, string> | null {
+  const skip = new Set([
+    "x-api-key", "x-goog-api-key", ...CONTROL_HEADERS,
+  ]);
+  const out: Record<string, string> = {};
+  let size = 0;
+  for (const [k, v] of Object.entries(c.req.header())) {
+    const lower = k.toLowerCase();
+    if (!lower.startsWith("x-") || skip.has(lower) || isEdgeHeader(lower) || HOP_HEADERS.has(lower)) continue;
+    size += lower.length + (v as string).length;
+    if (size > 4096) break;
+    out[lower] = v as string;
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 export function buildApp(deps: AppDeps) {
@@ -261,6 +319,41 @@ export function buildApp(deps: AppDeps) {
     }
   }
 
+  /** Parse the sub-tenant control headers and load the tenant's policy row.
+   *  Fail-open: a malformed tenant id (or a DB blip with no cached policy)
+   *  degrades to untagged/key-default behavior — customer traffic never 4xxes
+   *  over an attribution tag. */
+  async function tenantContext(c: Context, key: ApiKeyRow): Promise<TenantContext> {
+    const rawTenant = c.req.header("x-cache-tenant")?.trim();
+    const tenantId = rawTenant && TENANT_ID_RE.test(rawTenant) ? rawTenant : null;
+    const rawSlot = c.req.header("x-cache-warm-slot")?.trim();
+    const slot = tenantId && rawSlot && TENANT_ID_RE.test(rawSlot) ? rawSlot : "";
+    const rawTtl = c.req.header("x-cache-ttl")?.trim().toLowerCase();
+    let policy: TenantPolicyRow | null = null;
+    if (tenantId) {
+      try {
+        policy = await findTenantPolicy(pool, key.id, tenantId);
+      } catch { /* fail-open */ }
+    }
+    return {
+      tenantId,
+      slot,
+      injection: parseOnOff(c.req.header("x-cache-injection")),
+      keepalive: parseOnOff(c.req.header("x-cache-keepalive")),
+      ttl: rawTtl === "5m" || rawTtl === "1h" ? rawTtl : null,
+      policy,
+    };
+  }
+
+  /** request header > tenant policy > key setting (already org-resolved) */
+  function effSettings(key: ApiKeyRow, tc: TenantContext) {
+    return {
+      autoCacheControl: tc.injection ?? tc.policy?.auto_cache_control ?? key.auto_cache_control,
+      keepaliveEnabled: tc.keepalive ?? tc.policy?.keepalive_enabled ?? key.keepalive_enabled,
+      anthropicTtl: tc.ttl ?? tc.policy?.anthropic_cache_ttl ?? key.anthropic_cache_ttl,
+    };
+  }
+
   interface LogParams {
     key: ApiKeyRow;
     provider: "anthropic" | "openai" | "gemini" | "grok";
@@ -271,6 +364,7 @@ export function buildApp(deps: AppDeps) {
     usage: Usage;
     cost: CostBreakdown;
     hashes: BlockHash[] | null;
+    tenantId?: string | null;
   }
 
   // fire-and-forget: never delays the response path
@@ -279,10 +373,11 @@ export function buildApp(deps: AppDeps) {
       try {
         let breaker = false;
         if (p.hashes) {
-          const prev = await lastPrefixHashes(pool, p.key.id, p.provider, p.model);
+          const prev = await lastPrefixHashes(pool, p.key.id, p.provider, p.model, p.tenantId ?? null);
           breaker = detectBreaker(prev, p.hashes);
           noteBreakerObservation(
-            p.key.id, p.provider, p.model, breaker, p.usage.cache_read_input_tokens > 0
+            p.key.id, p.provider, p.model, breaker, p.usage.cache_read_input_tokens > 0,
+            p.tenantId ?? ""
           );
         }
         await insertRequestLog(pool, {
@@ -297,6 +392,7 @@ export function buildApp(deps: AppDeps) {
           cost: p.cost,
           prefixHashes: p.hashes,
           breakerDetected: breaker,
+          tenantId: p.tenantId ?? null,
         });
         if (after) await after();
       } catch (e) {
@@ -350,10 +446,13 @@ export function buildApp(deps: AppDeps) {
     const dk = decryptProviderKey(key.anthropic_key_encrypted, "Anthropic");
     if ("err" in dk) return dk.err;
 
+    const tc = await tenantContext(c, key);
+    const eff = effSettings(key, tc);
+
     // injection auto-pauses while the prefix keeps changing (cache breaker):
     // nobody can cache it, so breakpoints would only buy write premiums
-    if (key.auto_cache_control && !key.billing_locked && !injectionPaused(key.id, "anthropic", model)) {
-      body = injectCacheControl(body, model, key.anthropic_cache_ttl).body;
+    if (eff.autoCacheControl && !key.billing_locked && !injectionPaused(key.id, "anthropic", model, tc.tenantId ?? "")) {
+      body = injectCacheControl(body, model, eff.anthropicTtl).body;
     }
 
     const hashes = prefixBlockHashes(body);
@@ -366,10 +465,15 @@ export function buildApp(deps: AppDeps) {
 
     // keep-alive prefix is extracted up front so the log closure doesn't
     // retain the (possibly huge) request body until the DB write drains
-    const kaPrefix = key.keepalive_enabled ? extractKeepalivePrefix(body) : null;
+    const kaPrefix = eff.keepaliveEnabled ? extractKeepalivePrefix(body) : null;
     const kaTokens = kaPrefix ? estimatePrefixTokens(body) : 0;
+    // gateway/tenant traffic: pings must replay the caller's routing and
+    // attribution headers, or the gateway rejects/mis-bills them
+    const kaHeaders =
+      kaPrefix && (key.upstream_gateway_url || tc.tenantId) ? pingReplayHeaders(c) : null;
 
-    const upstreamRes = await upstreamFetch(doFetch, new URL("/v1/messages", anthropicUrl), {
+    const upstreamRes = await upstreamFetch(doFetch,
+      new URL("/v1/messages", key.upstream_gateway_url ?? anthropicUrl), {
       method: "POST",
       headers,
       body: JSON.stringify(body),
@@ -379,11 +483,27 @@ export function buildApp(deps: AppDeps) {
       logRequest(
         {
           key, provider: "anthropic", model, status, started, isStream, usage,
-          cost: computeCost(model, usage), hashes,
+          cost: computeCost(model, usage), hashes, tenantId: tc.tenantId,
         },
         async () => {
           if (status < 400 && kaPrefix) {
-            await saveKeepaliveState(pool, key.id, "anthropic", kaPrefix, kaTokens, encryptionKey);
+            await saveKeepaliveState(pool, key.id, "anthropic", kaPrefix, kaTokens, encryptionKey, {
+              tenantId: tc.tenantId ?? "",
+              slot: tc.slot,
+              headerKeepalive: tc.keepalive,
+              extraHeaders: kaHeaders,
+              maxSlots: tc.policy?.keepalive_max_slots ?? TENANT_DEFAULT_MAX_SLOTS,
+            });
+          } else if (status < 400 && tc.tenantId && !eff.keepaliveEnabled) {
+            // keep-warm turned OFF for this slot: neutralize any existing warm
+            // slot immediately — without this, the last saved slot would keep
+            // pinging until its give-up window even though the user opted out
+            await pool.query(
+              `UPDATE keepalive_state SET header_keepalive=false
+                WHERE api_key_id=$1 AND provider='anthropic' AND tenant_id=$2 AND slot=$3
+                  AND header_keepalive IS DISTINCT FROM false`,
+              [key.id, tc.tenantId, tc.slot]
+            );
           }
         }
       );
@@ -490,6 +610,9 @@ export function buildApp(deps: AppDeps) {
       body = { ...body, stream_options: { include_usage: true } };
     }
 
+    const tc = await tenantContext(c, key);
+    const eff = effSettings(key, tc);
+
     const isChatLike = c.req.path === "/v1/chat/completions" || c.req.path === "/v1/responses";
     const isChat = c.req.path === "/v1/chat/completions";
     const hashes = isChatLike ? prefixBlockHashesOpenAI(body) : null;
@@ -504,7 +627,7 @@ export function buildApp(deps: AppDeps) {
     // bench S6, steady traffic: 0 → 97.8% of the prefix). Caller-set params always pass through.
     // same breaker auto-pause as Anthropic: a changing prefix can't be cached,
     // so 5.6 breakpoints would only buy 1.25x write premiums
-    if (!isGrok && key.auto_cache_control && !key.billing_locked && !injectionPaused(key.id, provider, model)) {
+    if (!isGrok && eff.autoCacheControl && !key.billing_locked && !injectionPaused(key.id, provider, model, tc.tenantId ?? "")) {
       if (isChat) body = injectOpenAIBreakpoint(body, model).body;
       else if (isResponsesPath) body = injectOpenAIBreakpointResponses(body, model).body;
     }
@@ -516,7 +639,7 @@ export function buildApp(deps: AppDeps) {
     // xAI routes cache lookups by conversation: a stable x-grok-conv-id pins
     // identical prefixes to the same server, lifting hit rates. Injected only
     // when the caller sends none. https://docs.x.ai/developers/advanced-api-usage/prompt-caching
-    if (isGrok && key.auto_cache_control && hashes && hashes.length && !headers.get("x-grok-conv-id")) {
+    if (isGrok && eff.autoCacheControl && hashes && hashes.length && !headers.get("x-grok-conv-id")) {
       headers.set("x-grok-conv-id", "cai-" + sha256Hex(JSON.stringify(hashes)).slice(0, 16));
     }
 
@@ -550,7 +673,7 @@ export function buildApp(deps: AppDeps) {
               prompt_tokens: u.prompt, completion_tokens: u.completion,
               cached_tokens: u.cached, cache_write_tokens: u.written,
             }),
-        hashes,
+        hashes, tenantId: tc.tenantId,
       });
     };
 
@@ -655,6 +778,7 @@ export function buildApp(deps: AppDeps) {
 
     const dk = decryptProviderKey(key.gemini_key_encrypted, "Gemini");
     if ("err" in dk) return dk.err;
+    const tc = await tenantContext(c, key);
     const headers = forwardHeaders(c);
     headers.set("x-goog-api-key", dk.value);
 
@@ -683,7 +807,7 @@ export function buildApp(deps: AppDeps) {
           candidatesTokenCount: u.completion,
           cachedContentTokenCount: u.cached,
         }),
-        hashes,
+        hashes, tenantId: tc.tenantId,
       });
     };
 
@@ -735,7 +859,8 @@ export function buildApp(deps: AppDeps) {
     if ("err" in dk) return dk.err;
     const headers = forwardHeaders(c);
     headers.set("x-api-key", dk.value);
-    const url = new URL(c.req.path + (new URL(c.req.url).search || ""), anthropicUrl);
+    const url = new URL(c.req.path + (new URL(c.req.url).search || ""),
+      key.upstream_gateway_url ?? anthropicUrl);
     const init: RequestInit = { method: c.req.method, headers };
     if (!["GET", "HEAD"].includes(c.req.method)) {
       (init as any).body = c.req.raw.body;
@@ -745,6 +870,9 @@ export function buildApp(deps: AppDeps) {
     if (res.status === 401) return humanizeUpstreamAuthError("Anthropic");
     return new Response(res.body, { status: res.status, headers: passthroughHeaders(res) });
   }
+
+  // sub-tenant management: the enterprise key manages its own tenant policies
+  app.route("/admin/v1", adminRoutes(pool, encryptionKey));
 
   app.all("/v1beta/*", async (c) => {
     const r = await resolveKey(c);
