@@ -60,6 +60,8 @@ interface Candidate {
   tenant_budget_usd_daily: string | null;
   anthropic_cache_ttl: "5m" | "1h";
   keepalive_hold_until: Date | null;
+  /** per-slot hold (tenant hold command) — max() with the key-level hold */
+  slot_hold_until: Date | null;
   last_request_at: Date;
   last_ping_at: Date | null;
   last_1h_write_at: Date | null;
@@ -129,6 +131,7 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
   const { rows } = await pool.query<Candidate>(
     `SELECT ks.api_key_id, k.org_id, ks.tenant_id, ks.slot, ks.prefix_sha, ks.model,
             ks.encrypted_prefix, ks.encrypted_headers,
+            ks.hold_until AS slot_hold_until,
             ks.last_request_at, ks.last_ping_at,
             ks.last_1h_write_at, ks.pings_today, ks.spend_today_usd,
             to_char(ks.spend_day, 'YYYY-MM-DD') AS spend_day,
@@ -208,7 +211,8 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
       continue;
     }
     const held = (r: Candidate) =>
-      r.keepalive_hold_until && new Date(r.keepalive_hold_until).getTime() > now;
+      (r.keepalive_hold_until && new Date(r.keepalive_hold_until).getTime() > now) ||
+      (r.slot_hold_until && new Date(r.slot_hold_until).getTime() > now);
     const better =
       (held(row) && !held(cur)) ||
       (held(row) === held(cur) &&
@@ -226,7 +230,10 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
     if (dropped.has(row)) continue;
     const lastReq = new Date(row.last_request_at).getTime();
     const sinceReq = now - lastReq;
-    const holdUntil = row.keepalive_hold_until ? new Date(row.keepalive_hold_until).getTime() : 0;
+    const holdUntil = Math.max(
+      row.keepalive_hold_until ? new Date(row.keepalive_hold_until).getTime() : 0,
+      row.slot_hold_until ? new Date(row.slot_hold_until).getTime() : 0
+    );
     const held = holdUntil > now;
 
     const longTtl = row.anthropic_cache_ttl === "1h";

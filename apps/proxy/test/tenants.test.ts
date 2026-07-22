@@ -241,6 +241,52 @@ test("header OFF beats tenant policy ON — and neutralizes an existing warm slo
   await admin("DELETE", "/tenants/org-mixed");
 });
 
+test("tenant hold command holds ONE user's slot — works with keep-warm off, denied when policy forbids", async () => {
+  // keep-warm off everywhere for tenant org-hold; the chat command itself opts in
+  const res = await callMessages(
+    { "x-cache-tenant": "org-hold", "x-cache-warm-slot": "user-h1", "x-cache-keepalive": "off" },
+    {
+      model: "claude-sonnet-4-5",
+      max_tokens: 16,
+      system: [{ type: "text", text: BIG, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: "캐시 45분 유지해" }],
+    }
+  );
+  assert.equal(res.status, 200);
+  const reply = JSON.stringify(await res.json());
+  assert.ok(reply.includes("🔥"), `expected hold confirmation, got: ${reply.slice(0, 200)}`);
+  const { rows } = await pool.query(
+    `SELECT slot, header_keepalive, hold_until FROM keepalive_state
+      WHERE api_key_id=$1 AND tenant_id='org-hold'`, [keyId]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].slot, "user-h1");
+  assert.equal(rows[0].header_keepalive, true, "hold command is the opt-in");
+  assert.ok(new Date(rows[0].hold_until).getTime() > Date.now() + 40 * 60 * 1000);
+
+  // the held slot pings even though nothing else enables keepalive
+  const pinged = await keepaliveSweep({
+    pool, upstreamUrl: mock.url, encryptionKey: ENC_KEY,
+    now: () => Date.now() + PING_AFTER_MS + 1_000,
+  });
+  assert.ok(pinged >= 1, "held slot must be pinged");
+  await settle();
+  const { rows: logged } = await pool.query(
+    `SELECT tenant_id FROM request_logs WHERE api_key_id=$1 AND is_keepalive
+      ORDER BY id DESC LIMIT 1`, [keyId]);
+  assert.equal(logged[0].tenant_id, "org-hold");
+
+  // an org admin who explicitly forbids warming also blocks the hold command
+  await admin("PUT", "/tenants/org-forbid", { keepalive_enabled: false });
+  const denied = await callMessages(
+    { "x-cache-tenant": "org-forbid", "x-cache-warm-slot": "u1" },
+    { model: "claude-sonnet-4-5", max_tokens: 16, messages: [{ role: "user", content: "cai:hold 2h" }] }
+  );
+  const deniedReply = JSON.stringify(await denied.json());
+  assert.ok(!deniedReply.includes("🔥"), "policy off → hold denied");
+  await admin("DELETE", "/tenants/org-hold");
+  await admin("DELETE", "/tenants/org-forbid");
+});
+
 test("management API: list, get, 404, delete (delete also stops warming)", async () => {
   const list = await admin("GET", "/tenants");
   assert.equal(list.status, 200);

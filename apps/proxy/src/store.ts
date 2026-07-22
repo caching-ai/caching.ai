@@ -251,6 +251,8 @@ export interface KeepaliveSaveOpts {
   extraHeaders?: Record<string, string> | null;
   /** prune this tenant's slots beyond N (most recently active kept) */
   maxSlots?: number;
+  /** explicit warm hold for THIS slot (chat hold command); omitted = keep existing */
+  holdUntil?: Date;
 }
 
 /** upsert keep-alive state after a real customer request (opt-in keys only) */
@@ -280,13 +282,14 @@ export async function saveKeepaliveState(
   await pool.query(
     `INSERT INTO keepalive_state (api_key_id, provider, tenant_id, slot, encrypted_prefix,
                                   model, prefix_token_estimate, prefix_sha, header_keepalive,
-                                  encrypted_headers, last_request_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now())
+                                  encrypted_headers, hold_until, last_request_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
      ON CONFLICT (api_key_id, provider, tenant_id, slot) DO UPDATE
        SET encrypted_prefix=$5, model=$6, prefix_token_estimate=$7, prefix_sha=$8,
-           header_keepalive=$9, encrypted_headers=$10, last_request_at=now()`,
+           header_keepalive=$9, encrypted_headers=$10,
+           hold_until=COALESCE($11, keepalive_state.hold_until), last_request_at=now()`,
     [apiKeyId, provider, tenantId, slot, enc, model, prefixTokenEstimate, sha256Hex(plain),
-     opts.headerKeepalive ?? null, encHeaders]
+     opts.headerKeepalive ?? null, encHeaders, opts.holdUntil ?? null]
   );
   // slot cap: a tenant only keeps its most recently active N slots warm.
   // Legacy traffic (tenant '') is a single fixed slot — nothing to prune.

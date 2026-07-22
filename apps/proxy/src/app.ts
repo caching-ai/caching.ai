@@ -418,6 +418,44 @@ export function buildApp(deps: AppDeps) {
     return "held";
   }
 
+  // Tenant traffic: the hold command comes from ONE end user — it holds that
+  // user's warm slot, never the whole enterprise key. The command itself is
+  // the opt-in (it sets header_keepalive=true for the slot), so it works even
+  // when keep-warm is otherwise off — unless the tenant policy explicitly
+  // forbids warming (keepalive_enabled=false, e.g. an org admin enforcing
+  // OFF). The hold request carries the conversation, so its prefix is
+  // captured right here — no prior warmed request needed.
+  async function applyTenantWarmHold(
+    c: Context, key: ApiKeyRow, tc: TenantContext, body: any, hold: WarmHold
+  ): Promise<HoldOutcome> {
+    if (key.billing_locked) return "keepalive_off";
+    // The chat command is an explicit ACTION — it outranks the X-Cache-Keepalive
+    // header (a default preference). Only an explicit tenant-policy ban
+    // (keepalive_enabled=false, e.g. an org admin enforcing OFF) blocks it.
+    if (tc.policy?.keepalive_enabled === false) return "keepalive_off";
+    const holdUntil = new Date(Date.now() + hold.ms);
+    const kaPrefix = extractKeepalivePrefix(body);
+    if (kaPrefix) {
+      await saveKeepaliveState(pool, key.id, "anthropic", kaPrefix,
+        estimatePrefixTokens(body), encryptionKey, {
+          tenantId: tc.tenantId!,
+          slot: tc.slot,
+          headerKeepalive: true,
+          extraHeaders: pingReplayHeaders(c),
+          maxSlots: tc.policy?.keepalive_max_slots ?? TENANT_DEFAULT_MAX_SLOTS,
+          holdUntil,
+        });
+      return "held";
+    }
+    const upd = await pool.query(
+      `UPDATE keepalive_state SET hold_until=$4, header_keepalive=true
+        WHERE api_key_id=$1 AND provider='anthropic' AND tenant_id=$2 AND slot=$3
+          AND encrypted_prefix IS NOT NULL`,
+      [key.id, tc.tenantId, tc.slot, holdUntil]
+    );
+    return upd.rowCount ? "held" : "no_prefix";
+  }
+
   // ---------- Anthropic: /v1/messages (full pipeline) ----------
   async function handleAnthropicMessages(c: Context, key: ApiKeyRow): Promise<Response> {
     const cap = tooLarge(c);
@@ -439,7 +477,10 @@ export function buildApp(deps: AppDeps) {
     const holdText = lastUserTextAnthropic(body);
     const hold = holdText ? parseWarmHold(holdText) : null;
     if (hold) {
-      const outcome = await applyWarmHold(key, hold);
+      const htc = await tenantContext(c, key);
+      const outcome = htc.tenantId
+        ? await applyTenantWarmHold(c, key, htc, body, hold)
+        : await applyWarmHold(key, hold);
       return anthropicHoldResponse(model, holdReplyText(outcome, hold.ms, hold.lang), body?.stream === true);
     }
 
