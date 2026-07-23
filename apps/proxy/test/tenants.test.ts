@@ -287,6 +287,135 @@ test("tenant hold command holds ONE user's slot — works with keep-warm off, de
   await admin("DELETE", "/tenants/org-forbid");
 });
 
+test("admin hold API sets/clears a slot hold without a chat body", async () => {
+  // seed a saved conversation for user-a1 (keepalive on so the prefix is stored)
+  await callMessages({
+    "x-cache-tenant": "org-adminhold", "x-cache-warm-slot": "user-a1", "x-cache-keepalive": "on",
+  });
+  await settle();
+
+  // hold via the management API — no chat round-trip
+  const res = await admin("POST", "/tenants/org-adminhold/hold", { slot: "user-a1", hold_ms: 45 * 60_000 });
+  assert.equal(res.status, 200);
+  const out = await res.json();
+  assert.equal(out.held, 1);
+  const { rows } = await pool.query(
+    `SELECT header_keepalive, hold_until FROM keepalive_state
+      WHERE api_key_id=$1 AND tenant_id='org-adminhold' AND slot='user-a1'`, [keyId]);
+  assert.equal(rows[0].header_keepalive, true);
+  assert.ok(new Date(rows[0].hold_until).getTime() > Date.now() + 40 * 60_000);
+
+  // unknown slot → held: 0 (nothing saved to hold)
+  const none = await admin("POST", "/tenants/org-adminhold/hold", { slot: "user-none", hold_ms: 60_000 });
+  assert.equal((await none.json()).held, 0);
+
+  // hold_ms=0 releases the hold — fail-closed (off until the next opted-in request)
+  const clear = await admin("POST", "/tenants/org-adminhold/hold", { slot: "user-a1", hold_ms: 0 });
+  assert.equal((await clear.json()).cleared, 1);
+  const { rows: after } = await pool.query(
+    `SELECT header_keepalive, hold_until FROM keepalive_state
+      WHERE api_key_id=$1 AND tenant_id='org-adminhold' AND slot='user-a1'`, [keyId]);
+  assert.equal(after[0].hold_until, null);
+  assert.equal(after[0].header_keepalive, false);
+
+  // policy ban blocks the admin hold like the chat command
+  await admin("PUT", "/tenants/org-adminhold", { keepalive_enabled: false });
+  const denied = await admin("POST", "/tenants/org-adminhold/hold", { slot: "user-a1", hold_ms: 60_000 });
+  assert.equal(denied.status, 403);
+  // validation
+  assert.equal((await admin("POST", "/tenants/org-adminhold/hold", { slot: "bad slot!", hold_ms: 1 })).status, 400);
+  assert.equal((await admin("POST", "/tenants/org-adminhold/hold", { slot: "user-a1", hold_ms: -1 })).status, 400);
+  await admin("DELETE", "/tenants/org-adminhold");
+});
+
+test("X-Cache-Hold-Ms rides a normal request: captures + holds even with keepalive off", async () => {
+  // the platform layer says "this user has an active hold" while the
+  // preference header still says off — the hold must win
+  const res = await callMessages(
+    {
+      "x-cache-tenant": "org-holdhdr", "x-cache-warm-slot": "user-hh1",
+      "x-cache-keepalive": "off", "x-cache-hold-ms": String(50 * 60_000),
+    },
+    {
+      model: "claude-sonnet-4-5",
+      max_tokens: 16,
+      system: [{ type: "text", text: BIG, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: "please refactor the auth module" }],
+    }
+  );
+  assert.equal(res.status, 200);
+  // forwarded upstream as a NORMAL request (not swallowed like a chat hold)
+  assert.ok(JSON.stringify(mock.state.bodies.at(-1)).includes("refactor the auth module"));
+  const h = mock.state.headers.at(-1)!;
+  assert.equal(h["x-cache-hold-ms"], undefined, "control header never forwarded");
+  await settle();
+  const { rows } = await pool.query(
+    `SELECT header_keepalive, hold_until FROM keepalive_state
+      WHERE api_key_id=$1 AND tenant_id='org-holdhdr' AND slot='user-hh1'`, [keyId]);
+  assert.equal(rows.length, 1, "hold header must capture the prefix despite keepalive=off");
+  assert.equal(rows[0].header_keepalive, true);
+  assert.ok(new Date(rows[0].hold_until).getTime() > Date.now() + 45 * 60_000);
+
+  // held slot is swept
+  const pinged = await keepaliveSweep({
+    pool, upstreamUrl: mock.url, encryptionKey: ENC_KEY,
+    now: () => Date.now() + PING_AFTER_MS + 1_000,
+  });
+  assert.ok(pinged >= 1, "held slot must be pinged");
+
+  // tenant-policy ban still blocks the hold header
+  await admin("PUT", "/tenants/org-holdban", { keepalive_enabled: false });
+  await callMessages({
+    "x-cache-tenant": "org-holdban", "x-cache-warm-slot": "u1",
+    "x-cache-hold-ms": String(10 * 60_000),
+  });
+  await settle();
+  const { rows: banned } = await pool.query(
+    "SELECT 1 FROM keepalive_state WHERE api_key_id=$1 AND tenant_id='org-holdban'", [keyId]);
+  assert.equal(banned.length, 0, "policy off → hold header ignored");
+  await admin("DELETE", "/tenants/org-holdhdr");
+  await admin("DELETE", "/tenants/org-holdban");
+});
+
+test("active hold survives subsequent keepalive=off traffic; release doesn't resurrect warming", async () => {
+  // keep-warm-off user gets a slot via one opted-in request, then goes off
+  await callMessages({
+    "x-cache-tenant": "org-survive", "x-cache-warm-slot": "u1", "x-cache-keepalive": "on",
+  });
+  await settle();
+  const hold = await admin("POST", "/tenants/org-survive/hold", { slot: "u1", hold_ms: 2 * 60 * 60_000 });
+  assert.equal((await hold.json()).held, 1);
+
+  // the user's next ordinary message (pref off, no hold header) must NOT kill the hold
+  await callMessages({
+    "x-cache-tenant": "org-survive", "x-cache-warm-slot": "u1", "x-cache-keepalive": "off",
+  });
+  await settle();
+  let { rows } = await pool.query(
+    `SELECT header_keepalive, hold_until FROM keepalive_state
+      WHERE api_key_id=$1 AND tenant_id='org-survive' AND slot='u1'`, [keyId]);
+  assert.equal(rows[0].header_keepalive, true, "off traffic must not neutralize an active hold");
+  assert.ok(new Date(rows[0].hold_until).getTime() > Date.now());
+
+  // release with an org policy that says ON — the user's slot must stay off
+  await admin("PUT", "/tenants/org-survive", { keepalive_enabled: true });
+  await admin("POST", "/tenants/org-survive/hold", { slot: "u1", hold_ms: 0 });
+  rows = (await pool.query(
+    `SELECT header_keepalive, hold_until FROM keepalive_state
+      WHERE api_key_id=$1 AND tenant_id='org-survive' AND slot='u1'`, [keyId])).rows;
+  assert.equal(rows[0].hold_until, null);
+  assert.equal(rows[0].header_keepalive, false, "release fails closed — policy ON must not resurrect warming");
+  const pinged = await keepaliveSweep({
+    pool, upstreamUrl: mock.url, encryptionKey: ENC_KEY,
+    now: () => Date.now() + PING_AFTER_MS + 1_000,
+  });
+  const { rows: after } = await pool.query(
+    `SELECT last_ping_at FROM keepalive_state
+      WHERE api_key_id=$1 AND tenant_id='org-survive' AND slot='u1'`, [keyId]);
+  assert.equal(after[0].last_ping_at, null, `released slot must not ping (pinged=${pinged})`);
+  await admin("DELETE", "/tenants/org-survive");
+});
+
 test("management API: list, get, 404, delete (delete also stops warming)", async () => {
   const list = await admin("GET", "/tenants");
   assert.equal(list.status, 200);

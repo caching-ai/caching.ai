@@ -821,7 +821,7 @@ export const zh: Dict = {
       "X-Cache-Keepalive: on|off、X-Cache-Injection: on|off、X-Cache-Ttl: 5m|1h — 按请求覆盖。请求头优先于租户策略，租户策略优先于密钥设置",
     ],
     tenantsApiT: "用密钥本身管理租户",
-    tenantsApiB: "管理 API 直接用你的 ck_ 密钥认证（x-api-key 或 Authorization: Bearer）— 不用经过控制台。GET /admin/v1/tenants 列出租户；GET/PUT/DELETE /admin/v1/tenants/{tenant} 查询、更新或删除某一个。PUT 是部分更新（upsert）：只改你发送的字段 — auto_cache_control、keepalive_enabled、keepalive_budget_usd_daily、anthropic_cache_ttl、keepalive_max_slots，发 null 则该字段回到继承密钥设置。DELETE 相当于让这个客户下线：删除其策略并停止其保温。GET /admin/v1/tenants/{tenant}/stats 返回请求数、保温 ping、令牌、缓存读写、成本与节省：",
+    tenantsApiB: "管理 API 直接用你的 ck_ 密钥认证（x-api-key 或 Authorization: Bearer）— 不用经过控制台。GET /admin/v1/tenants 列出租户；GET/PUT/DELETE /admin/v1/tenants/{tenant} 查询、更新或删除某一个。PUT 是部分更新（upsert）：只改你发送的字段 — auto_cache_control、keepalive_enabled、keepalive_budget_usd_daily、anthropic_cache_ttl、keepalive_max_slots，发 null 则该字段回到继承密钥设置。DELETE 相当于让这个客户下线：删除其策略并停止其保温。POST /admin/v1/tenants/{tenant}/hold（{slot, hold_ms}）无需聊天往返即可为该槽位已保存的会话设置保温锁定 — 相当于平台替最终用户说了一句「帮我保温缓存」；hold_ms=0 解除。也可以在普通请求上附加 X-Cache-Hold-Ms 头，一次性捕获并锁定该请求的前缀 — 这是显式操作，优先于 X-Cache-Keepalive: off。GET /admin/v1/tenants/{tenant}/stats 返回请求数、保温 ping、令牌、缓存读写、成本与节省：",
     tenantsNote: "预算是叠加生效的：租户的 keepalive_budget_usd_daily 限制该租户的保温 ping，密钥的每日预算仍然限制整把密钥；保温和其他地方一样仅限 Anthropic。企业版：如果你的 Anthropic 流量要经过自己的网关，GET/PUT/DELETE /admin/v1/gateway 可以为密钥设置上游 — 仅限运营方批准的白名单地址。保温 ping 也会走这个网关，并原样重放你的自定义 x-* 请求头，网关侧的路由与归属因此照常生效。要将你的网关加入白名单，请联系支持团队。",
     selfHostNote: "在自托管？运维端点（healthz·readyz·Prometheus 指标）与环境变量都整理在 GitHub README 里。",
     verifyT: "验证生效",

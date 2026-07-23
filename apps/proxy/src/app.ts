@@ -34,6 +34,7 @@ import {
   lastUserTextResponses,
   lastUserTextGemini,
   holdReplyText,
+  HOLD_MAX_MS,
   type WarmHold,
   type HoldOutcome,
 } from "./logic/warmHold.js";
@@ -99,6 +100,7 @@ const CONTROL_HEADERS = [
   "x-cache-keepalive",
   "x-cache-injection",
   "x-cache-ttl",
+  "x-cache-hold-ms",
 ] as const;
 const TENANT_ID_RE = /^[A-Za-z0-9._:-]{1,120}$/;
 
@@ -109,11 +111,15 @@ interface TenantContext {
   injection: boolean | null;
   keepalive: boolean | null;
   ttl: "5m" | "1h" | null;
+  /** X-Cache-Hold-Ms: an active warm hold rides along on a normal request —
+   *  the platform (not the end user's chat text) asks to keep this slot's
+   *  prefix warm for N more ms. Explicit action: outranks keepalive=off. */
+  holdMs: number | null;
   policy: TenantPolicyRow | null;
 }
 
 const NO_TENANT: TenantContext = {
-  tenantId: null, slot: "", injection: null, keepalive: null, ttl: null, policy: null,
+  tenantId: null, slot: "", injection: null, keepalive: null, ttl: null, holdMs: null, policy: null,
 };
 
 function parseOnOff(v: string | undefined): boolean | null {
@@ -329,6 +335,9 @@ export function buildApp(deps: AppDeps) {
     const rawSlot = c.req.header("x-cache-warm-slot")?.trim();
     const slot = tenantId && rawSlot && TENANT_ID_RE.test(rawSlot) ? rawSlot : "";
     const rawTtl = c.req.header("x-cache-ttl")?.trim().toLowerCase();
+    const rawHold = Math.floor(Number(c.req.header("x-cache-hold-ms")));
+    const holdMs =
+      slot && Number.isFinite(rawHold) && rawHold > 0 ? Math.min(rawHold, HOLD_MAX_MS) : null;
     let policy: TenantPolicyRow | null = null;
     if (tenantId) {
       try {
@@ -341,6 +350,7 @@ export function buildApp(deps: AppDeps) {
       injection: parseOnOff(c.req.header("x-cache-injection")),
       keepalive: parseOnOff(c.req.header("x-cache-keepalive")),
       ttl: rawTtl === "5m" || rawTtl === "1h" ? rawTtl : null,
+      holdMs,
       policy,
     };
   }
@@ -504,9 +514,15 @@ export function buildApp(deps: AppDeps) {
     headers.set("x-api-key", dk.value);
     headers.set("content-type", "application/json");
 
+    // an active platform hold (X-Cache-Hold-Ms) is an explicit action like the
+    // chat hold command: it captures/holds this slot even when the keepalive
+    // preference header says off — only a tenant-policy ban blocks it
+    const holdActive =
+      tc.holdMs != null && !!tc.tenantId && !key.billing_locked &&
+      tc.policy?.keepalive_enabled !== false;
     // keep-alive prefix is extracted up front so the log closure doesn't
     // retain the (possibly huge) request body until the DB write drains
-    const kaPrefix = eff.keepaliveEnabled ? extractKeepalivePrefix(body) : null;
+    const kaPrefix = eff.keepaliveEnabled || holdActive ? extractKeepalivePrefix(body) : null;
     const kaTokens = kaPrefix ? estimatePrefixTokens(body) : 0;
     // gateway/tenant traffic: pings must replay the caller's routing and
     // attribution headers, or the gateway rejects/mis-bills them
@@ -531,18 +547,23 @@ export function buildApp(deps: AppDeps) {
             await saveKeepaliveState(pool, key.id, "anthropic", kaPrefix, kaTokens, encryptionKey, {
               tenantId: tc.tenantId ?? "",
               slot: tc.slot,
-              headerKeepalive: tc.keepalive,
+              headerKeepalive: holdActive ? true : tc.keepalive,
               extraHeaders: kaHeaders,
               maxSlots: tc.policy?.keepalive_max_slots ?? TENANT_DEFAULT_MAX_SLOTS,
+              holdUntil: holdActive ? new Date(Date.now() + tc.holdMs!) : undefined,
             });
-          } else if (status < 400 && tc.tenantId && !eff.keepaliveEnabled) {
+          } else if (status < 400 && tc.tenantId && !eff.keepaliveEnabled && !holdActive) {
             // keep-warm turned OFF for this slot: neutralize any existing warm
             // slot immediately — without this, the last saved slot would keep
-            // pinging until its give-up window even though the user opted out
+            // pinging until its give-up window even though the user opted out.
+            // An ACTIVE hold survives: the hold was an explicit action that
+            // outranks the keepalive=off preference, and ordinary follow-up
+            // traffic must not silently kill it (only hold release does).
             await pool.query(
               `UPDATE keepalive_state SET header_keepalive=false
                 WHERE api_key_id=$1 AND provider='anthropic' AND tenant_id=$2 AND slot=$3
-                  AND header_keepalive IS DISTINCT FROM false`,
+                  AND header_keepalive IS DISTINCT FROM false
+                  AND (hold_until IS NULL OR hold_until <= now())`,
               [key.id, tc.tenantId, tc.slot]
             );
           }

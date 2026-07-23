@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import type pg from "pg";
 import { encrypt } from "@caching/shared";
 import { findApiKey, clearApiKeyCache, clearTenantPolicyCache, type ApiKeyRow } from "./store.js";
+import { HOLD_MAX_MS, HOLD_MIN_MS } from "./logic/warmHold.js";
 
 // Sub-tenant management API, authenticated with the enterprise ck_ key itself
 // (Authorization: Bearer ck_... or x-api-key). A platform provisions per-tenant
@@ -13,6 +14,8 @@ import { findApiKey, clearApiKeyCache, clearTenantPolicyCache, type ApiKeyRow } 
 //   PUT    /admin/v1/tenants/:tenant            — upsert policy (partial; null clears a field)
 //   DELETE /admin/v1/tenants/:tenant            — drop the policy row (back to key defaults)
 //   GET    /admin/v1/tenants/:tenant/stats      — usage/savings attribution (?days=7)
+//   POST   /admin/v1/tenants/:tenant/hold       — warm-hold one slot's saved
+//                                                 conversations ({slot, hold_ms}; 0 clears)
 //   GET    /admin/v1/gateway                    — this key's upstream gateway
 //   PUT    /admin/v1/gateway                    — set it (operator allowlist only)
 //   DELETE /admin/v1/gateway                    — back to the provider default
@@ -206,6 +209,70 @@ export function adminRoutes(pool: pg.Pool, encryptionKey?: string) {
     );
     clearTenantPolicyCache();
     return c.json({ deleted: del.rowCount ?? 0 });
+  });
+
+  // Warm-hold one end user's slot without a chat round-trip — the platform
+  // equivalent of the "keep my cache warm" chat command. Applies to the
+  // slot's already-saved conversations (all providers); hold_ms=0 releases
+  // the hold and returns the slot to inherited keep-warm behavior.
+  app.post("/tenants/:tenant/hold", async (c) => {
+    const a = await auth(c);
+    if ("res" in a) return a.res;
+    const tenant = tenantParam(c);
+    if (!tenant) return err(c, 400, "Invalid tenant id.");
+    let body: any;
+    try {
+      body = await c.req.json();
+    } catch {
+      return err(c, 400, "Request body must be valid JSON.");
+    }
+    const slot = typeof body?.slot === "string" ? body.slot.trim() : "";
+    if (!slot || !TENANT_ID_RE.test(slot)) {
+      return err(c, 400, "slot is required: 1-120 chars of letters, digits, . _ : -");
+    }
+    const rawMs = body?.hold_ms;
+    if (typeof rawMs !== "number" || !Number.isFinite(rawMs) || Math.floor(rawMs) < 0) {
+      return err(c, 400, "hold_ms must be a non-negative number of milliseconds (0 clears the hold).");
+    }
+    // sub-minimum holds round UP to the chat-command minimum, never down to a
+    // clear — 0 must be an explicit, intentional release
+    const floored = Math.floor(rawMs);
+    const holdMs = floored === 0 ? 0 : Math.min(Math.max(floored, HOLD_MIN_MS), HOLD_MAX_MS);
+    if (a.key.billing_locked) {
+      return err(c, 403, "This account's billing is locked, so warm holds can't be set right now.");
+    }
+    // same ban as the chat hold command: only an explicit tenant-policy OFF blocks it
+    const { rows: pol } = await pool.query(
+      "SELECT keepalive_enabled FROM key_tenant_policies WHERE api_key_id=$1 AND tenant_id=$2",
+      [a.key.id, tenant]
+    );
+    if (pol[0]?.keepalive_enabled === false) {
+      return err(c, 403, "Keep-warm is disabled for this tenant by policy, so a hold can't be set.");
+    }
+    if (holdMs === 0) {
+      // release: fail-closed to header_keepalive=false — the pre-hold value is
+      // gone (the hold overwrote it with true), and NULL would fall back to a
+      // tenant/key-level ON, resurrecting warming a user explicitly turned off.
+      // A keep-warm-on user's next request re-syncs it to true immediately.
+      const upd = await pool.query(
+        `UPDATE keepalive_state SET hold_until=NULL, header_keepalive=false
+          WHERE api_key_id=$1 AND provider='anthropic' AND tenant_id=$2 AND slot=$3`,
+        [a.key.id, tenant, slot]
+      );
+      return c.json({ held: 0, cleared: upd.rowCount ?? 0, hold_until: null });
+    }
+    const upd = await pool.query(
+      `UPDATE keepalive_state
+          SET hold_until = now() + make_interval(secs => $4), header_keepalive = true
+        WHERE api_key_id=$1 AND provider='anthropic' AND tenant_id=$2 AND slot=$3
+          AND encrypted_prefix IS NOT NULL
+        RETURNING hold_until`,
+      [a.key.id, tenant, slot, holdMs / 1000]
+    );
+    return c.json({
+      held: upd.rowCount ?? 0,
+      hold_until: upd.rows[0]?.hold_until ?? null,
+    });
   });
 
   app.get("/tenants/:tenant/stats", async (c) => {
