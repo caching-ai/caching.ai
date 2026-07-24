@@ -336,6 +336,29 @@ export default async function Landing() {
         <p className="mt-4 text-center text-[13px] text-mute">{d.bench.date}</p>
       </section>
 
+      {/* The economics of warming — why deliberately keeping a cache warm is the
+          cheaper move, and where we stop because the math says so. Answers the
+          most common developer objection ("isn't artificial warming wasteful?"). */}
+      <section id="economics" className="border-t border-hairline bg-[#fafafa]">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <p className="eyebrow text-center">{d.econ.eyebrow}</p>
+          <h2 className="mx-auto mt-3 max-w-4xl whitespace-pre-line text-center text-display-lg text-ink [text-wrap:balance]">{d.econ.title}</h2>
+          <p className="mx-auto mt-5 max-w-3xl whitespace-pre-line text-center text-[17px] leading-relaxed text-body-mid [text-wrap:balance]">{d.econ.lead}</p>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {d.econ.cards.map((c, i) => (
+              <div key={c.t} className="card !p-7">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-green/10 text-accent-green">
+                  {i === 0 ? <IconClock size={17} /> : i === 1 ? <IconFlame size={17} /> : <IconLock size={17} />}
+                </div>
+                <h3 className="mt-4 text-[16px] font-semibold text-ink">{c.t}</h3>
+                <p className="mt-2 text-[14.5px] leading-relaxed text-body-mid">{c.d}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mx-auto mt-9 max-w-3xl text-center text-[15px] leading-relaxed text-body-mid [text-wrap:balance]">{d.econ.honesty}</p>
+        </div>
+      </section>
+
       {/* Who it's for */}
       <section className="border-t border-hairline mx-auto max-w-6xl px-6 py-20">
         <p className="eyebrow text-center">{d.personas.eyebrow}</p>

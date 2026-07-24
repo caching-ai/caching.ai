@@ -70,6 +70,17 @@ export const en = {
     ctaRaw: "Method & raw logs",
     date: "2026-07 runs · 10,000+ calls · $80+ at list prices · Anthropic cells: 3 runs each · raw logs public",
   },
+  econ: {
+    eyebrow: "The economics of warming",
+    title: "Warming a cache on purpose?\nThe math says it's cheaper.",
+    lead: "For web caches, letting things expire is right — regeneration is free. LLM caches are different:\nrebuilding costs 1.25× list price, while reading a live cache costs 0.1×. One rebuild = 11.5 warming pings.",
+    cards: [
+      { t: "Break-even: 52 minutes", d: "For any absence under 52 minutes, warming always wins. Past that point (~62.5 min after your last request) warming stops itself — not a cent is spent outside the profitable window." },
+      { t: "Past 90 minutes, switch strategies", d: "Long holds skip the 4-minute pings: the context is rewritten once as a 1-hour cache entry, cutting hourly upkeep 12×. The upgrade runs only after the old entry has expired — no overlapping spend." },
+      { t: "Your real requests are untouched", d: "Your requests always go out with their original cache markers. The pricier 1-hour write is attached to warming pings only, and a per-org daily budget cap quietly stops everything past its limit." },
+    ],
+    honesty: "Leaving for hours? Letting the cache expire is cheaper — so in that window, we stop first. Warming isn't a trick: on a cache where regeneration is a paid event, it's cost engineering that computes the break-even and spends only when it wins.",
+  },
   features: {
     eyebrow: "WHAT YOU GET",
     title: "Three layers of cache defense",

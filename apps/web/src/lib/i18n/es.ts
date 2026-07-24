@@ -71,6 +71,17 @@ export const es: Dict = {
     ctaRaw: "Método y registros crudos",
     date: "Ejecutado 2026-07 · 10,000+ llamadas · $80+ a precio de lista · celdas Anthropic: 3 ejecuciones · registros crudos públicos",
   },
+  econ: {
+    eyebrow: "La economía del calentamiento",
+    title: "¿Calentar la caché a propósito?\nLas matemáticas dicen que sale más barato.",
+    lead: "En cachés web, dejar que expiren es lo correcto — regenerar es gratis. Las cachés LLM son distintas:\nreconstruir cuesta 1.25× el precio de lista; leer una caché viva, 0.1×. Una reconstrucción = 11.5 pings de calentamiento.",
+    cards: [
+      { t: "Punto de equilibrio: 52 minutos", d: "Para ausencias de menos de 52 minutos, calentar siempre gana. Pasado ese punto (~62.5 min tras tu última petición) el calentamiento se detiene solo — fuera de la ventana rentable no se gasta ni un centavo." },
+      { t: "Pasados 90 minutos, cambio de estrategia", d: "Las retenciones largas no hacen pings cada 4 minutos: el contexto se reescribe una sola vez como entrada de caché de 1 hora, reduciendo el mantenimiento por hora 12×. La mejora solo corre cuando la entrada vieja ya expiró — sin gasto duplicado." },
+      { t: "Tus peticiones reales, intactas", d: "Tus peticiones siempre salen con sus marcadores de caché originales. La escritura de 1 hora, más cara, solo va en los pings de calentamiento, y un tope de presupuesto diario por organización detiene todo silenciosamente al superarse." },
+    ],
+    honesty: "¿Te vas por horas? Dejar que expire es más barato — así que en esa ventana, nos detenemos primero. Calentar no es un truco: en una caché donde regenerar es un evento de pago, es ingeniería de costos que calcula el punto de equilibrio y solo gasta cuando gana.",
+  },
   features: {
     eyebrow: "QUÉ OBTIENES",
     title: "Tres capas de defensa de caché",
