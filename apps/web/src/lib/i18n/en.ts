@@ -73,13 +73,13 @@ export const en = {
   econ: {
     eyebrow: "The economics of warming",
     title: "Warming a cache on purpose?\nThe math says it's cheaper.",
-    lead: "For web caches, letting things expire is right — regeneration is free. LLM caches are different:\nrebuilding costs 1.25× list price, while reading a live cache costs 0.1×. One rebuild = 11.5 warming pings.",
+    lead: "\"While I'm working the cache stays alive anyway, and if I leave I just let it die — right?\" The better you know cache pricing, the fairer that question. But traffic with 6–50 minute call gaps — support bots, Slack bots, pipelines, agents waiting on human approval — structurally expires a 5-minute cache every single time.\nAnd rebuilding costs 1.25× list price while reading a live cache costs 0.1×: one rebuild = 11.5 warming pings.",
     cards: [
       { t: "Break-even: 52 minutes", d: "For any absence under 52 minutes, warming always wins. Past that point (~62.5 min after your last request) warming stops itself — not a cent is spent outside the profitable window." },
       { t: "Past 90 minutes, switch strategies", d: "Long holds skip the 4-minute pings: the context is rewritten once as a 1-hour cache entry, cutting hourly upkeep 12×. The upgrade runs only after the old entry has expired — no overlapping spend." },
       { t: "Your real requests are untouched", d: "Your requests always go out with their original cache markers. The pricier 1-hour write is attached to warming pings only, and a per-org daily budget cap quietly stops everything past its limit." },
     ],
-    honesty: "Leaving for hours? Letting the cache expire is cheaper — so in that window, we stop first. Warming isn't a trick: on a cache where regeneration is a paid event, it's cost engineering that computes the break-even and spends only when it wins.",
+    honesty: "The 67% saving in the benchmark above is exactly that middle-zone traffic (support calls 6–9 minutes apart) — on the same traffic, caching without warming lost 25%. Conversely, leaving for hours? Letting the cache expire is cheaper, and in that window we stop first. Warming isn't a trick: it's cost engineering that computes the break-even and spends only when it wins.",
   },
   features: {
     eyebrow: "WHAT YOU GET",
