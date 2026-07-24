@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SavingsCalculator from "@/components/SavingsCalculator";
+import EconTimeline from "@/components/EconTimeline";
 import Footer from "@/components/Footer";
 import ProviderLogos from "@/components/ProviderLogos";
 import {
@@ -344,6 +345,7 @@ export default async function Landing() {
           <p className="eyebrow text-center">{d.econ.eyebrow}</p>
           <h2 className="mx-auto mt-3 max-w-4xl whitespace-pre-line text-center text-display-lg text-ink [text-wrap:balance]">{d.econ.title}</h2>
           <p className="mx-auto mt-5 max-w-3xl whitespace-pre-line text-center text-[17px] leading-relaxed text-body-mid [text-wrap:balance]">{d.econ.lead}</p>
+          <EconTimeline t={d.econ.viz} />
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {d.econ.cards.map((c, i) => (
               <div key={c.t} className="card !p-7">

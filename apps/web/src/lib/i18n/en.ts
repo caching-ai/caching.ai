@@ -80,6 +80,14 @@ export const en = {
       { t: "Your real requests are untouched", d: "Your requests always go out with their original cache markers. The pricier 1-hour write is attached to warming pings only, and a per-org daily budget cap quietly stops everything past its limit." },
     ],
     honesty: "The 67% saving in the benchmark above is exactly that middle-zone traffic (support calls 6–9 minutes apart) — on the same traffic, caching without warming lost 25%. Conversely, leaving for hours? Letting the cache expire is cheaper, and in that window we stop first. Warming isn't a trick: it's cost engineering that computes the break-even and spends only when it wins.",
+    viz: {
+      off: "Warming off",
+      offResult: "5 re-buys (1.25× each)",
+      on: "Warming on",
+      onResult: "All hits · 10 pings (0.1× each)",
+      legend: ["First request (cache write)", "Inside the 5-min band — hit 0.1×", "Outside the band — expired, re-buy 1.25×", "Warming ping 0.1×"] as [string, string, string, string],
+      note: "Sixty minutes of calls ~10 minutes apart — the same shape as the benchmark's sparse-support scenario. Each dot is a request; the band behind it is the 5-minute cache lifetime.",
+    },
   },
   features: {
     eyebrow: "WHAT YOU GET",

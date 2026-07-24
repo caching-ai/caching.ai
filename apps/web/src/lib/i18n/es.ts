@@ -81,6 +81,14 @@ export const es: Dict = {
       { t: "Tus peticiones reales, intactas", d: "Tus peticiones siempre salen con sus marcadores de caché originales. La escritura de 1 hora, más cara, solo va en los pings de calentamiento, y un tope de presupuesto diario por organización detiene todo silenciosamente al superarse." },
     ],
     honesty: "El ahorro del 67% del benchmark de arriba es exactamente ese tráfico de zona media (llamadas de soporte cada 6–9 minutos) — en el mismo tráfico, cachear sin calentar perdió un 25%. Al revés, ¿te vas por horas? Dejar que expire es más barato, y en esa ventana nos detenemos primero. Calentar no es un truco: es ingeniería de costos que calcula el punto de equilibrio y solo gasta cuando gana.",
+    viz: {
+      off: "Sin calentamiento",
+      offResult: "5 recompras (1.25× cada una)",
+      on: "Con calentamiento",
+      onResult: "Todo aciertos · 10 pings (0.1× cada uno)",
+      legend: ["Primera petición (escritura de caché)", "Dentro de la banda de 5 min — acierto 0.1×", "Fuera de la banda — expirada, recompra 1.25×", "Ping de calentamiento 0.1×"] as [string, string, string, string],
+      note: "Sesenta minutos de llamadas cada ~10 minutos — la misma forma que el escenario de soporte disperso del benchmark. Cada punto es una petición; la banda detrás es la vida de 5 minutos de la caché.",
+    },
   },
   features: {
     eyebrow: "QUÉ OBTIENES",
