@@ -328,6 +328,95 @@ test("admin hold API sets/clears a slot hold without a chat body", async () => {
   await admin("DELETE", "/tenants/org-adminhold");
 });
 
+// Why the admin hold API does NOT pre-warm like the chat command does: it
+// doesn't need to. The chat command answers a human who is walking away right
+// now, so a cold cache means the next turn pays a full re-write; the admin API
+// is a control-plane call whose held slot is picked up by the very next sweep
+// tick (30s in production), which writes the prefix itself. Pinning a paid
+// upstream write inside an admin endpoint would only add latency and a
+// surprise charge to a call that currently just sets a flag.
+test("admin hold on a slot past the give-up window is warmed by the next sweep tick", async () => {
+  await callMessages({
+    "x-cache-tenant": "org-lateheld", "x-cache-warm-slot": "user-l1", "x-cache-keepalive": "on",
+  });
+  await settle();
+
+  // age the slot far past the 62.5-minute give-up window: its cache is long
+  // dead and, without a hold, the sweep is deliberately silent
+  const base = new Date().setUTCHours(3, 0, 0, 0);
+  await pool.query(
+    `UPDATE keepalive_state SET last_request_at=to_timestamp($2/1000.0), last_ping_at=NULL,
+            pings_today=0, spend_today_usd=0
+      WHERE api_key_id=$1 AND tenant_id='org-lateheld' AND slot='user-l1'`,
+    [keyId, base - 2 * 3600_000]
+  );
+  const deps = { pool, upstreamUrl: mock.url, encryptionKey: ENC_KEY };
+  assert.equal(await keepaliveSweep({ ...deps, now: () => base }), 0, "no hold: stays silent");
+
+  const held = await admin("POST", "/tenants/org-lateheld/hold", { slot: "user-l1", hold_ms: 45 * 60_000 });
+  assert.equal((await held.json()).held, 1);
+
+  const before = mock.state.bodies.length;
+  assert.equal(await keepaliveSweep({ ...deps, now: () => base }), 1,
+    "the admin hold alone makes the next tick write the prefix — no pre-warm needed in the API");
+  assert.equal(mock.state.bodies.length, before + 1);
+  assert.equal(mock.state.bodies.at(-1)!.max_tokens, 1, "written as a warming ping");
+  await admin("DELETE", "/tenants/org-lateheld");
+});
+
+test("a ping the provider refuses to cache stops warming that slot", async () => {
+  // a prefix of its own: slots that share a prefix hash share one warming ping
+  // (shared-warming dedupe), and this test needs its own candidate
+  const uncacheable = {
+    model: "claude-sonnet-4-5", max_tokens: 16,
+    system: "u".repeat(20_000),
+    messages: [{ role: "user", content: "hi" }],
+  };
+  await callMessages({
+    "x-cache-tenant": "org-uncacheable", "x-cache-warm-slot": "user-u1", "x-cache-keepalive": "on",
+  }, uncacheable);
+  await settle();
+  const base = new Date().setUTCHours(3, 0, 0, 0);
+  await pool.query(
+    `UPDATE keepalive_state SET last_request_at=to_timestamp($2/1000.0), last_ping_at=NULL,
+            pings_today=0, spend_today_usd=0
+      WHERE api_key_id=$1 AND tenant_id='org-uncacheable' AND slot='user-u1'`,
+    [keyId, base - 10 * 60_000]
+  );
+
+  // the provider caches nothing (prefix under its minimum, or a gateway that
+  // strips the markers) — paying for a second ping would be throwing money away
+  const saved = mock.state.usage;
+  mock.state.usage = {
+    input_tokens: 800, output_tokens: 1,
+    cache_creation_input_tokens: 0, cache_read_input_tokens: 0,
+  };
+  const deps = { pool, upstreamUrl: mock.url, encryptionKey: ENC_KEY };
+  assert.equal(await keepaliveSweep({ ...deps, now: () => base }), 1, "one ping goes out and measures");
+  mock.state.usage = saved;
+
+  const { rows } = await pool.query(
+    `SELECT header_keepalive, hold_until FROM keepalive_state
+      WHERE api_key_id=$1 AND tenant_id='org-uncacheable' AND slot='user-u1'`, [keyId]);
+  assert.equal(rows[0].header_keepalive, false, "warming stopped for an uncacheable prefix");
+  assert.equal(rows[0].hold_until, null);
+  const before = mock.state.bodies.length;
+  assert.equal(await keepaliveSweep({ ...deps, now: () => base + PING_AFTER_MS + 1_000 }), 0,
+    "and it stays stopped — no second ping");
+  assert.equal(mock.state.bodies.length, before);
+
+  // self-healing: the next real request re-saves the slot and warming resumes
+  await callMessages({
+    "x-cache-tenant": "org-uncacheable", "x-cache-warm-slot": "user-u1", "x-cache-keepalive": "on",
+  }, uncacheable);
+  await settle();
+  const { rows: back } = await pool.query(
+    `SELECT header_keepalive FROM keepalive_state
+      WHERE api_key_id=$1 AND tenant_id='org-uncacheable' AND slot='user-u1'`, [keyId]);
+  assert.equal(back[0].header_keepalive, true, "a real request brings warming back on its own");
+  await admin("DELETE", "/tenants/org-uncacheable");
+});
+
 test("X-Cache-Hold-Ms rides a normal request: captures + holds even with keepalive off", async () => {
   // the platform layer says "this user has an active hold" while the
   // preference header still says off — the hold must win

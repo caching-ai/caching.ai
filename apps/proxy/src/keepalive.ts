@@ -365,6 +365,32 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
       breakerDetected: false,
       tenantId: row.tenant_id === "" ? null : row.tenant_id,
     });
+
+    // A successful ping that cached NOTHING is the provider telling us this
+    // prefix can't be cached — it's under the model's minimum, or an upstream
+    // gateway strips the cache_control markers. Every further ping would pay
+    // full input price for zero discount, so stop warming this slot instead of
+    // repeating it every four minutes until the give-up window closes. The
+    // customer's next real request re-saves the row, so warming resumes by
+    // itself the moment the prefix becomes cacheable again.
+    const cachedTokens =
+      result.usage.cache_creation_input_tokens + result.usage.cache_read_input_tokens;
+    if (result.status < 400 && cachedTokens === 0) {
+      await pool.query(
+        `UPDATE keepalive_state SET header_keepalive = false, hold_until = NULL
+          WHERE api_key_id = $1 AND provider = 'anthropic' AND tenant_id = $2 AND slot = $3`,
+        [row.api_key_id, row.tenant_id, row.slot]
+      );
+      // a solo key's badge reads the key-level hold; don't let it promise warmth
+      if (row.tenant_id === "") {
+        await pool.query(
+          "UPDATE api_keys SET keepalive_hold_until = NULL WHERE id = $1", [row.api_key_id]);
+      }
+      console.warn(
+        `keepalive: provider cached nothing for key ${row.api_key_id} ` +
+        `slot '${row.tenant_id}/${row.slot}' — warming stopped for this prefix`
+      );
+    }
     if (result.status < 400) pinged++;
   }
   return pinged;
