@@ -7,3 +7,6 @@ dist/
 .DS_Store
 
 scratch/
+
+# humanize 등 로컬 작업 스크래치 — 공개 미러에서도 제외되는 경로
+_workspace/

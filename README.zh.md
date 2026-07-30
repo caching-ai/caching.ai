@@ -41,7 +41,7 @@
   因此代理绝不会在探测无法回本的地方花费你的预算。长时间保温
   会以单次 1h-TTL 写入的方式提供，而不是持续的探测流。
   要离开一会儿？在聊天中说一句 `"keep my cache warm for 2 hours"`
-  ——代理会自行应答并保持预热（见下文）。
+  ——代理会自行应答，当场为那段对话预热，并保持预热（见下文）。
 - **前缀优化器** —— 测量你的提示词在请求之间发生变化的部分，
   并告诉你如何修复。
 - **子租户** —— 用一把 `ck_` 密钥服务众多终端客户？给每个请求打上
@@ -76,19 +76,27 @@ ANTHROPIC_API_KEY=ck_your_caching_ai_key
 
 ```
 "keep my cache warm for 2 hours"
-"캐시 2시간 지켜줘" · "キャッシュを2時間保温して"
-"mantén mi caché caliente 2 horas" · "帮我保温缓存 2 小时"
-cai:hold 45m          # explicit command — works anywhere, any language
+"캐시 2시간 지켜줘" · "キャッシュを2時間保温して" · "帮我保温缓存 2 小时"
+"mantén mi caché caliente 2 horas" · "halte meinen Cache 2 Stunden warm"
+"держи кэш тёплым 2 часа" · "giữ cache nóng trong 2 giờ"
+cai:warm 45m          # explicit command — works anywhere, any language
 
-→ 🔥 Warming held for 2 hours. (answered at the proxy, $0)
+→ 🔥 Pre-warmed this conversation right now (18,204 tokens cached) and
+  holding it warm for 2 hours.      (answered at the proxy, 0 model tokens)
 ```
 
-默认 2 小时，限定在 5 分钟至 12 小时之间。适用于所有路径——Anthropic
-Messages、OpenAI chat 与 responses（Codex）、Gemini、Grok——并以你提问
-所用的语言回复（ko/en/ja/es/zh）。消息必须简短（≤ 60 个字符）且明确
-是关于缓存的；任何看起来像真实提示词的内容都会原样透传。密钥必须启用
-保活功能，且每日预热预算仍然有效。保温生效期间，控制台会显示
-"Warm hold active · until HH:MM" 徽章。
+默认 2 小时，限定在 5 分钟至 12 小时之间——而且这条命令会**一边保温一边当场
+预热**。命令所在的那段对话，正是需要保温的对话，所以代理会抓住那次请求的
+前缀，向厂商写入一次，并把厂商实际缓存的 token 数原样告诉你。你一开口缓存
+就已经是热的，不需要事先有一次预热过的请求。
+
+适用于所有路径——Anthropic Messages、OpenAI chat 与 responses（Codex）、
+Gemini、Grok——并以你提问所用的语言回复：ko/en/ja/zh/es/pt/fr/de/it/ru/tr/
+vi/id/hi/th/ar。消息必须简短（≤ 80 个字符）且明确是关于缓存的；任何看起来
+像真实提示词的内容都会原样透传。密钥必须启用保活功能；预热写入与保温 ping
+一样计入每日预算（一分钟内重复同一条命令不会付两次钱），90 分钟以上的锁定
+会用一次 1 小时 TTL 的写入来预热，而不是连续发 ping。保温生效期间，控制台
+会显示 "Warm hold active · until HH:MM" 徽章。
 
 ### Claude Code 全自动 ([`claude-plugin/`](claude-plugin/))
 

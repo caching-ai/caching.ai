@@ -509,7 +509,8 @@ test("warm hold: anthropic command intercepted, hold set, nothing forwarded", as
   assert.equal(res.status, 200);
   const j = await res.json();
   assert.equal(j.role, "assistant");
-  assert.match(j.content[0].text, /30분 동안 유지할게요/);
+  assert.match(j.content[0].text, /예열해뒀어요/, "the saved prefix is warmed on the spot");
+  assert.match(j.content[0].text, /30분 동안/);
   const { rows } = await pool.query(
     `SELECT extract(epoch FROM (keepalive_hold_until - now()))::int AS secs FROM api_keys WHERE id=$1`,
     [k.rows[0].id]
@@ -555,7 +556,8 @@ test("warm hold: openai stream command returns synthetic SSE; real prompts pass 
   assert.equal(res.status, 200);
   assert.match(res.headers.get("content-type") ?? "", /text\/event-stream/);
   const sseText = await res.text();
-  assert.match(sseText, /Holding your cache warm for 1 hour/);
+  assert.match(sseText, /only applies to Anthropic traffic/,
+    "no Anthropic prefix on this key: warming has nothing to hold, and we say why");
   assert.match(sseText, /data: \[DONE\]/);
   assert.equal(openaiState.bodies.length, before, "command must not reach the upstream");
 
@@ -601,13 +603,17 @@ test("warm hold: sweep pings past give-up while held, stops when hold expires", 
   assert.equal(rows[0].pings_today, 0, "past give-up without hold: silent");
 
   // active hold: give-up is overridden
-  await pool.query("UPDATE api_keys SET keepalive_hold_until = now() + interval '1 hour' WHERE id=$1", [k.rows[0].id]);
+  await pool.query(
+    "UPDATE api_keys SET keepalive_hold_until = to_timestamp($2/1000.0) WHERE id=$1",
+    [k.rows[0].id, base + 3600_000]);
   await keepaliveSweep({ ...deps, now: () => base });
   rows = (await pool.query("SELECT pings_today FROM keepalive_state WHERE api_key_id=$1", [k.rows[0].id])).rows;
   assert.equal(rows[0].pings_today, 1, "held: pinged past give-up");
 
   // hold expired: silent again on the next window
-  await pool.query("UPDATE api_keys SET keepalive_hold_until = now() - interval '1 minute' WHERE id=$1", [k.rows[0].id]);
+  await pool.query(
+    "UPDATE api_keys SET keepalive_hold_until = to_timestamp($2/1000.0) WHERE id=$1",
+    [k.rows[0].id, base - 60_000]);
   await keepaliveSweep({ ...deps, now: () => base + PING_AFTER_MS + 60_000 });
   rows = (await pool.query("SELECT pings_today FROM keepalive_state WHERE api_key_id=$1", [k.rows[0].id])).rows;
   assert.equal(rows[0].pings_today, 1, "expired hold: no further pings");
@@ -637,7 +643,8 @@ test("warm hold: responses API (Codex) command intercepted with responses-shaped
   const j = await res.json();
   assert.equal(j.object, "response");
   assert.equal(j.status, "completed");
-  assert.match(j.output[0].content[0].text, /2時間/);
+  assert.match(j.output[0].content[0].text, /Anthropic/, "answered in Japanese, on the responses wire");
+  assert.match(j.output[0].content[0].text, /保温/);
   assert.equal(openaiState.bodies.length, before, "command must not reach the upstream");
 
   // streaming variant emits the responses SSE event sequence
@@ -675,7 +682,7 @@ test("warm hold: gemini command intercepted with candidates-shaped reply", async
   assert.equal(res.status, 200);
   const j = await res.json();
   assert.equal(j.candidates[0].content.role, "model");
-  assert.match(j.candidates[0].content.parts[0].text, /2小时/);
+  assert.match(j.candidates[0].content.parts[0].text, /保温只对 Anthropic 流量生效/);
   assert.equal(j.candidates[0].finishReason, "STOP");
   assert.equal(geminiState.bodies.length, before, "command must not reach the upstream");
 });

@@ -42,7 +42,8 @@ discount actually land:
   so the proxy never spends your budget where a ping can't pay off. Long
   holds are served as a single 1h-TTL write instead of a ping stream.
   Stepping away? Say `"keep my cache warm for 2 hours"`
-  in chat — the proxy answers it itself and holds warming (see below).
+  in chat — the proxy answers it itself, pre-warms that very conversation on
+  the spot, and holds warming (see below).
 - **Prefix optimizer** — measures which part of your prompt changes between
   requests and tells you how to fix it.
 - **Sub-tenants** — serving many end-customers through one `ck_` key? Tag
@@ -77,20 +78,30 @@ replies instantly, and never forwards it upstream, so it costs zero tokens:
 
 ```
 "keep my cache warm for 2 hours"
-"캐시 2시간 지켜줘" · "キャッシュを2時間保温して"
-"mantén mi caché caliente 2 horas" · "帮我保温缓存 2 小时"
-cai:hold 45m          # explicit command — works anywhere, any language
+"캐시 2시간 지켜줘" · "キャッシュを2時間保温して" · "帮我保温缓存 2 小时"
+"mantén mi caché caliente 2 horas" · "halte meinen Cache 2 Stunden warm"
+"держи кэш тёплым 2 часа" · "giữ cache nóng trong 2 giờ"
+cai:warm 45m          # explicit command — works anywhere, any language
 
-→ 🔥 Warming held for 2 hours. (answered at the proxy, $0)
+→ 🔥 Pre-warmed this conversation right now (18,204 tokens cached) and
+  holding it warm for 2 hours.      (answered at the proxy, 0 model tokens)
 ```
 
-Default 2 h, clamped to 5 min – 12 h. Works on every path — Anthropic
-Messages, OpenAI chat & responses (Codex), Gemini, Grok — and replies in the
-language you asked in (ko/en/ja/es/zh). The message must be short (≤ 60
-chars) and clearly about the cache; anything that looks like a real prompt
-passes through untouched. Keep-alive must be enabled on the key, and the
-daily warming budget still applies. The console shows a
-"Warm hold active · until HH:MM" badge while it lasts.
+Default 2 h, clamped to 5 min – 12 h — and the command **pre-warms while it
+holds**. The conversation the command arrived on IS the conversation to keep
+warm, so the proxy captures that request's prefix, writes it to the provider
+once, and quotes the token count the provider reports cached. The cache is
+live the moment you ask; no prior warmed request needed.
+
+Works on every path — Anthropic Messages, OpenAI chat & responses (Codex),
+Gemini, Grok — and replies in the language you asked in: ko/en/ja/zh/es/pt/
+fr/de/it/ru/tr/vi/id/hi/th/ar. The message must be short (≤ 80 chars) and
+clearly about the cache; anything that looks like a real prompt passes
+through untouched. Keep-alive must be enabled on the key; the pre-warm write
+is metered as a warming ping inside the daily budget (repeat the command
+within a minute and it never pays for a second write), and a hold of 90 min
+or more is written once on the 1h TTL instead of a ping stream. The console
+shows a "Warm hold active · until HH:MM" badge while it lasts.
 
 ### Claude Code: fully automatic ([`claude-plugin/`](claude-plugin/))
 

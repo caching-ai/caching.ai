@@ -282,11 +282,13 @@ agent = Agent(name="Helper",
           <div className="mt-4">
             <Code>{`# a chat message, through any SDK — the proxy answers it, the AI never sees it
 "keep my cache warm for 2 hours"
-"캐시 2시간 지켜줘" · "キャッシュを2時間保温して"
-"mantén mi caché caliente 2 horas" · "帮我保温缓存 2 小时"
-cai:hold 45m   # explicit command — works anywhere, any language
+"캐시 2시간 지켜줘" · "キャッシュを2時間保温して" · "帮我保温缓存 2 小时"
+"mantén mi caché caliente 2 horas" · "halte meinen Cache 2 Stunden warm"
+"держи кэш тёплым 2 часа" · "giữ cache nóng trong 2 giờ"
+cai:warm 45m   # explicit command — works anywhere, any language
 
-# → 🔥 Warming held for 2 hours. (answered at the proxy, $0)`}</Code>
+# → 🔥 Pre-warmed this conversation right now (18,204 tokens cached) and
+#   holding it warm for 2 hours.   (answered at the proxy, 0 model tokens)`}</Code>
           </div>
           <ul className="mt-3 flex list-disc flex-col gap-2 pl-5 text-body-mid">
             {t.holdBullets.map((b) => (

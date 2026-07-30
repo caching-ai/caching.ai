@@ -14,7 +14,9 @@ import {
   injectOpenAIBreakpoint,
   injectOpenAIBreakpointResponses,
   estimatePrefixTokens,
+  hasCacheControl,
 } from "./logic/cacheControl.js";
+import { prewarmNow, HOLD_UPGRADE_MIN_MS } from "./keepalive.js";
 import { sha256Hex } from "@caching/shared";
 import {
   prefixBlockHashes,
@@ -411,59 +413,151 @@ export function buildApp(deps: AppDeps) {
     })();
   }
 
-  // ---------- warm hold: a chat message that is a command to the proxy ----------
-  // Applies the hold and returns what the synthetic reply should say. Never
-  // touches the upstream — the command itself costs nothing.
-  async function applyWarmHold(key: ApiKeyRow, hold: WarmHold): Promise<HoldOutcome> {
-    if (!key.keepalive_enabled || key.billing_locked) return "keepalive_off";
-    const { rows } = await pool.query(
-      "SELECT 1 FROM keepalive_state WHERE api_key_id=$1 AND encrypted_prefix IS NOT NULL LIMIT 1",
-      [key.id]
-    );
-    if (!rows[0]) return "no_prefix";
-    await pool.query(
-      "UPDATE api_keys SET keepalive_hold_until = now() + make_interval(secs => $2) WHERE id = $1",
-      [key.id, hold.ms / 1000]
-    );
-    return "held";
+  // ---------- cache command: a chat message that is a command to the proxy ----------
+  // The command arrives ON the conversation it wants kept warm, so the proxy
+  // does the whole job here: capture that prefix, write it upstream once so
+  // the cache is live NOW (pre-warm), and hold the warming window. Nothing is
+  // forwarded to the model — the command costs zero model tokens; the pre-warm
+  // write is metered as a warming ping inside the key's daily budget.
+  //
+  // The conversation prefix is only cacheable if it carries a breakpoint, so
+  // the same injection the request path would have done runs here too. The
+  // command message itself is dropped first: it is not part of the prefix the
+  // user will reuse, and warming a prefix nobody sends again buys nothing.
+  function captureCommandPrefix(body: any, ttl: "5m" | "1h") {
+    const msgs = Array.isArray(body?.messages) ? [...body.messages] : [];
+    if (msgs.length && msgs[msgs.length - 1]?.role === "user") msgs.pop();
+    const stripped = { ...body, messages: msgs };
+    const injected = injectCacheControl(stripped, body?.model ?? "", ttl).body;
+    if (!hasCacheControl(injected)) return null; // nothing worth caching yet
+    return extractKeepalivePrefix(injected);
   }
 
-  // Tenant traffic: the hold command comes from ONE end user — it holds that
-  // user's warm slot, never the whole enterprise key. The command itself is
-  // the opt-in (it sets header_keepalive=true for the slot), so it works even
-  // when keep-warm is otherwise off — unless the tenant policy explicitly
-  // forbids warming (keepalive_enabled=false, e.g. an org admin enforcing
-  // OFF). The hold request carries the conversation, so its prefix is
-  // captured right here — no prior warmed request needed.
-  async function applyTenantWarmHold(
-    c: Context, key: ApiKeyRow, tc: TenantContext, body: any, hold: WarmHold
-  ): Promise<HoldOutcome> {
-    if (key.billing_locked) return "keepalive_off";
-    // The chat command is an explicit ACTION — it outranks the X-Cache-Keepalive
-    // header (a default preference). Only an explicit tenant-policy ban
-    // (keepalive_enabled=false, e.g. an org admin enforcing OFF) blocks it.
-    if (tc.policy?.keepalive_enabled === false) return "keepalive_off";
+  interface CacheCommandResult {
+    outcome: HoldOutcome;
+    /** tokens the provider reports cached, for the reply (0 = don't quote one) */
+    tokens: number;
+  }
+
+  // Tenant traffic: the command comes from ONE end user — it holds that user's
+  // warm slot, never the whole enterprise key. For a tenant the command itself
+  // is the opt-in (it sets header_keepalive=true for the slot), so it works
+  // even when keep-warm is otherwise off, unless the tenant policy explicitly
+  // forbids warming (an org admin enforcing OFF).
+  async function applyCacheCommand(
+    c: Context, key: ApiKeyRow, tc: TenantContext, body: any, hold: WarmHold,
+    provider: "anthropic" | "openai" | "gemini" | "grok"
+  ): Promise<CacheCommandResult> {
+    const none = (outcome: HoldOutcome): CacheCommandResult => ({ outcome, tokens: 0 });
+    if (key.billing_locked) return none("keepalive_off");
+    if (tc.tenantId ? tc.policy?.keepalive_enabled === false : !key.keepalive_enabled) {
+      return none("keepalive_off");
+    }
+
+    const tenantId = tc.tenantId ?? "";
     const holdUntil = new Date(Date.now() + hold.ms);
-    const kaPrefix = extractKeepalivePrefix(body);
-    if (kaPrefix) {
-      await saveKeepaliveState(pool, key.id, "anthropic", kaPrefix,
+    const ttl = tc.ttl ?? tc.policy?.anthropic_cache_ttl ?? key.anthropic_cache_ttl;
+    // Warming is Anthropic-only by measurement (see keepalive.ts), so only
+    // Anthropic-wire traffic can be captured from the command request itself;
+    // on the other paths the command still holds (and re-warms) the slot's
+    // saved Anthropic prefix.
+    const fresh = provider === "anthropic" ? captureCommandPrefix(body, ttl) : null;
+    const kaHeaders = key.upstream_gateway_url || tc.tenantId ? pingReplayHeaders(c) : null;
+
+    if (fresh) {
+      await saveKeepaliveState(pool, key.id, "anthropic", fresh,
         estimatePrefixTokens(body), encryptionKey, {
-          tenantId: tc.tenantId!,
+          tenantId,
           slot: tc.slot,
-          headerKeepalive: true,
-          extraHeaders: pingReplayHeaders(c),
+          // a solo key's row must stay governed by the key's own toggle:
+          // pinning header_keepalive=true here would outlive a later opt-out
+          headerKeepalive: tc.tenantId ? true : tc.keepalive,
+          extraHeaders: kaHeaders,
           maxSlots: tc.policy?.keepalive_max_slots ?? TENANT_DEFAULT_MAX_SLOTS,
           holdUntil,
         });
-      return "held";
+    } else {
+      const upd = await pool.query(
+        `UPDATE keepalive_state SET hold_until=$4` +
+          (tc.tenantId ? `, header_keepalive=true` : ``) + `
+          WHERE api_key_id=$1 AND provider='anthropic' AND tenant_id=$2 AND slot=$3
+            AND encrypted_prefix IS NOT NULL`,
+        [key.id, tenantId, tc.slot, holdUntil]
+      );
+      // On an OpenAI/Gemini/Grok path with no Anthropic prefix to hold there
+      // is nothing warming can do for this caller — say that, instead of
+      // sending them off to "run one more request" that won't help either.
+      if (!upd.rowCount) return none(provider === "anthropic" ? "no_prefix" : "provider_not_warmed");
     }
-    const upd = await pool.query(
-      `UPDATE keepalive_state SET hold_until=$4, header_keepalive=true
-        WHERE api_key_id=$1 AND provider='anthropic' AND tenant_id=$2 AND slot=$3
-          AND encrypted_prefix IS NOT NULL`,
-      [key.id, tc.tenantId, tc.slot, holdUntil]
+    // the console badge (and the sweep's give-up override) read the key-level
+    // hold for untagged traffic; tenant slots carry their own hold_until
+    if (!tc.tenantId) {
+      await pool.query(
+        "UPDATE api_keys SET keepalive_hold_until = now() + make_interval(secs => $2) WHERE id = $1",
+        [key.id, hold.ms / 1000]
+      );
+    }
+
+    // pre-warm: the fresh prefix if we just captured one, else the slot's
+    // saved prefix (nothing else can be warmed for this caller)
+    let prefix: any = fresh;
+    if (!prefix) {
+      const { rows } = await pool.query<{ encrypted_prefix: string }>(
+        `SELECT encrypted_prefix FROM keepalive_state
+          WHERE api_key_id=$1 AND provider='anthropic' AND tenant_id=$2 AND slot=$3
+            AND encrypted_prefix IS NOT NULL`,
+        [key.id, tenantId, tc.slot]
+      );
+      try {
+        prefix = rows[0] ? JSON.parse(decrypt(rows[0].encrypted_prefix, encryptionKey)) : null;
+      } catch {
+        prefix = null;
+      }
+    }
+    if (!prefix) return none("held");
+
+    const res = await prewarmNow(
+      { pool, upstreamUrl: anthropicUrl, encryptionKey, fetchImpl: doFetch },
+      {
+        apiKeyId: key.id,
+        tenantId,
+        slot: tc.slot,
+        prefix,
+        providerKeyEncrypted: key.anthropic_key_encrypted,
+        upstreamGatewayUrl: key.upstream_gateway_url,
+        extraHeaders: kaHeaders,
+        budgetUsd: Number(key.keepalive_budget_usd_daily),
+        // a long hold is served as one 1h write instead of a ping stream
+        use1h: ttl === "1h" || hold.ms >= HOLD_UPGRADE_MIN_MS,
+      }
     );
-    return upd.rowCount ? "held" : "no_prefix";
+    switch (res.status) {
+      case "warmed":
+        return { outcome: "warmed", tokens: res.tokens };
+      case "budget":
+        return none("held_budget");
+      case "no_key":
+        return none("held_no_key");
+      case "too_small":
+        // The provider cached nothing: our token estimate over-counts, so a
+        // prefix we thought was cacheable can be under its minimum. Stop
+        // warming it — pinging an uncacheable prefix only burns budget — and
+        // say so instead of promising a warm cache that doesn't exist.
+        if (fresh) {
+          await pool.query(
+            `UPDATE keepalive_state SET header_keepalive=false, hold_until=NULL
+              WHERE api_key_id=$1 AND provider='anthropic' AND tenant_id=$2 AND slot=$3`,
+            [key.id, tenantId, tc.slot]
+          );
+          if (!tc.tenantId) {
+            await pool.query("UPDATE api_keys SET keepalive_hold_until = NULL WHERE id = $1", [key.id]);
+          }
+          return none("no_prefix");
+        }
+        return none("held");
+      default:
+        return none("held");
+    }
   }
 
   // ---------- Anthropic: /v1/messages (full pipeline) ----------
@@ -482,16 +576,15 @@ export function buildApp(deps: AppDeps) {
 
     const model: string = body?.model ?? "";
 
-    // hold commands are answered by the proxy itself — before the provider-key
-    // check, so they work even on a key with no provider key registered yet
+    // cache commands are answered by the proxy itself — before the provider-key
+    // check, so the reply explains a missing provider key instead of 403-ing
     const holdText = lastUserTextAnthropic(body);
     const hold = holdText ? parseWarmHold(holdText) : null;
     if (hold) {
       const htc = await tenantContext(c, key);
-      const outcome = htc.tenantId
-        ? await applyTenantWarmHold(c, key, htc, body, hold)
-        : await applyWarmHold(key, hold);
-      return anthropicHoldResponse(model, holdReplyText(outcome, hold.ms, hold.lang), body?.stream === true);
+      const { outcome, tokens } = await applyCacheCommand(c, key, htc, body, hold, "anthropic");
+      return anthropicHoldResponse(
+        model, holdReplyText(outcome, hold.ms, hold.lang, tokens), body?.stream === true);
     }
 
     const dk = decryptProviderKey(key.anthropic_key_encrypted, "Anthropic");
@@ -644,15 +737,16 @@ export function buildApp(deps: AppDeps) {
     const upstream = isGrok ? grokUrl : openaiUrl;
     const isStream = body?.stream === true;
 
-    // hold commands are answered by the proxy itself — before the provider-key
-    // check, so they work even on a key with no provider key registered yet
+    // cache commands are answered by the proxy itself — before the provider-key
+    // check, so the reply explains a missing provider key instead of 403-ing
     const isResponsesPath = c.req.path === "/v1/responses";
     if (c.req.path === "/v1/chat/completions" || isResponsesPath) {
       const holdText = isResponsesPath ? lastUserTextResponses(body) : lastUserTextOpenAI(body);
       const hold = holdText ? parseWarmHold(holdText) : null;
       if (hold) {
-        const outcome = await applyWarmHold(key, hold);
-        const reply = holdReplyText(outcome, hold.ms, hold.lang);
+        const htc = await tenantContext(c, key);
+        const { outcome, tokens } = await applyCacheCommand(c, key, htc, body, hold, provider);
+        const reply = holdReplyText(outcome, hold.ms, hold.lang, tokens);
         const created = Math.floor(Date.now() / 1000);
         return isResponsesPath
           ? responsesHoldResponse(model, reply, isStream, created)
@@ -822,19 +916,20 @@ export function buildApp(deps: AppDeps) {
       return jsonError("invalid_request_error", "Request body must be valid JSON.", 400);
     }
 
-    // hold commands are answered by the proxy itself — before the provider-key
-    // check, so they work even on a key with no provider key registered yet
+    // cache commands are answered by the proxy itself — before the provider-key
+    // check, so the reply explains a missing provider key instead of 403-ing
     {
       const holdText = lastUserTextGemini(body);
       const hold = holdText ? parseWarmHold(holdText) : null;
       if (hold) {
-        const outcome = await applyWarmHold(key, hold);
+        const htc = await tenantContext(c, key);
+        const { outcome, tokens } = await applyCacheCommand(c, key, htc, body, hold, "gemini");
         const mode = !isStream
           ? "json"
           : new URL(c.req.url).searchParams.get("alt") === "sse"
             ? "sse"
             : "array";
-        return geminiHoldResponse(model, holdReplyText(outcome, hold.ms, hold.lang), mode);
+        return geminiHoldResponse(model, holdReplyText(outcome, hold.ms, hold.lang, tokens), mode);
       }
     }
 

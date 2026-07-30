@@ -25,7 +25,7 @@
 - **캐시 분석** — 실제 히트율, 절감한 금액, 그리고 아무도 보여주지 않는 숫자: 캐시됐어야 하는데 놓쳐서 낭비된 금액까지 보여줘요. 토큰 수만 기록하고, 프롬프트/응답 본문은 절대 저장하지 않아요.
 - **캐시 가드** — `cache_control` 자동 주입(Anthropic), GPT-5.6+ 캐시 복원(5.6 세대는 breakpoint에서만 매칭돼서, 단순한 공유 프리픽스는 크로스 요청 히트가 0%예요 — 우리는 명시적인 `prompt_cache_breakpoint`와 안정적인 `prompt_cache_key`를 주입해요. 실측 0% → 97.8% 프리픽스 히트, 정상 트래픽 기준 — [BENCHMARK.ko.md](BENCHMARK.ko.md) S6 셀), 그리고 캐시 브레이커 탐지와 유력한 근본 원인(타임스탬프, 랜덤 ID, 순서가 바뀐 tools)까지 알려줘요.
 - **Keep-alive 워머** *(키별 opt-in, Anthropic 전용 — 의도된 설계예요)* — 1토큰 핑으로 재사용이 경제적인 동안만(최대 62.5분) 프리픽스를 다시 데워요. 일일 예산은 직접 정할 수 있어요. 다른 프로바이더들은 업스트림에서 캐시를 스스로 유지해요(직접 측정했어요 — [BENCHMARK.ko.md](BENCHMARK.ko.md)). 그래서 핑이 이득이 안 되는 곳에는 프록시가 예산을 절대 쓰지 않아요. 긴 홀드는 핑 스트림 대신 1h-TTL 쓰기 한 번으로 처리해요.
-  잠시 자리를 비우시나요? 채팅에 `"keep my cache warm for 2 hours"`라고 보내면 프록시가 직접 답하고 워머를 유지해줘요(아래 참고).
+  잠시 자리를 비우시나요? 채팅에 `"keep my cache warm for 2 hours"`라고 보내면 프록시가 직접 답하고, 그 대화를 바로 예열한 뒤 워머를 유지해줘요(아래 참고).
 - **프리픽스 옵티마이저** — 요청 사이에 프롬프트의 어느 부분이 바뀌는지 측정하고 어떻게 고치면 되는지 알려줘요.
 - **서브테넌트** — `ck_` 키 하나로 여러 고객사를 서빙하나요? 요청마다 `X-Cache-Tenant`(그리고 최종 사용자별로 `X-Cache-Warm-Slot`)만 붙이면 테넌트별 캐시 정책, 사용량·절감액 귀속, 워밍 슬롯이 생겨요 — 관리는 `/admin/v1/tenants`에서 그 키 자체로 프로그래밍 방식으로 해요. 고객마다 키를 새로 만들 필요가 없어요.
 
@@ -51,14 +51,18 @@ ANTHROPIC_API_KEY=ck_your_caching_ai_key
 
 ```
 "keep my cache warm for 2 hours"
-"캐시 2시간 지켜줘" · "キャッシュを2時間保温して"
-"mantén mi caché caliente 2 horas" · "帮我保温缓存 2 小时"
-cai:hold 45m          # explicit command — works anywhere, any language
+"캐시 2시간 지켜줘" · "キャッシュを2時間保温して" · "帮我保温缓存 2 小时"
+"mantén mi caché caliente 2 horas" · "halte meinen Cache 2 Stunden warm"
+"держи кэш тёплым 2 часа" · "giữ cache nóng trong 2 giờ"
+cai:warm 45m          # explicit command — works anywhere, any language
 
-→ 🔥 Warming held for 2 hours. (answered at the proxy, $0)
+→ 🔥 Pre-warmed this conversation right now (18,204 tokens cached) and
+  holding it warm for 2 hours.      (answered at the proxy, 0 model tokens)
 ```
 
-기본값은 2시간이고, 5분 – 12시간 범위로 제한돼요. 모든 경로에서 동작해요 — Anthropic Messages, OpenAI chat & responses(Codex), Gemini, Grok — 그리고 질문한 언어(ko/en/ja/es/zh)로 답해줘요. 메시지는 짧아야 하고(60자 이하) 캐시에 관한 내용이라는 게 분명해야 해요. 실제 프롬프트처럼 보이는 건 전부 그대로 통과시켜요. 키에 keep-alive가 켜져 있어야 하고, 일일 워머 예산도 그대로 적용돼요. 홀드가 유지되는 동안 콘솔에는 "Warm hold active · until HH:MM" 배지가 표시돼요.
+기본값은 2시간이고, 5분 – 12시간 범위로 제한돼요. 그리고 이 명령은 **지키면서 바로 예열까지** 해요. 명령이 실려 온 그 대화가 바로 지켜야 할 대화니까, 프록시가 그 요청의 프리픽스를 붙잡아 제공사에 한 번 써 두고, 실제로 캐시된 토큰 수를 그대로 알려줘요. 말하는 순간 캐시가 살아 있고, 미리 워밍된 요청이 따로 있을 필요가 없어요.
+
+모든 경로에서 동작해요 — Anthropic Messages, OpenAI chat & responses(Codex), Gemini, Grok — 그리고 질문한 언어로 답해줘요: ko/en/ja/zh/es/pt/fr/de/it/ru/tr/vi/id/hi/th/ar. 메시지는 짧아야 하고(80자 이하) 캐시에 관한 내용이라는 게 분명해야 해요. 실제 프롬프트처럼 보이는 건 전부 그대로 통과시켜요. 키에 keep-alive가 켜져 있어야 하고, 예열 쓰기는 워밍 핑과 똑같이 일일 예산 안에서 계량해요(1분 안에 같은 명령을 반복해도 두 번 결제되지 않아요). 90분 이상 홀드는 핑을 반복하는 대신 1시간 TTL로 한 번 써서 예열해요. 홀드가 유지되는 동안 콘솔에는 "Warm hold active · until HH:MM" 배지가 표시돼요.
 
 ### Claude Code는 완전 자동 ([`claude-plugin/`](claude-plugin/))
 

@@ -370,6 +370,137 @@ export async function keepaliveSweep(deps: KeepaliveDeps): Promise<number> {
   return pinged;
 }
 
+// ---------- immediate pre-warm (chat cache command) ----------
+// A cache command ("keep my cache warm for 2 hours") arrives ON the very
+// conversation it wants kept warm, so the proxy can make the cache real right
+// away instead of waiting out the sweep's first ping window — or, worse,
+// telling the user to go send a normal request first. One write now, then the
+// sweep takes over the refresh cadence.
+//
+// Metered exactly like a warming ping: the key's daily warming budget is the
+// guard, the spend lands on the same slot row, and the call shows up in the
+// dashboard as a keep-alive request.
+
+export interface PrewarmParams {
+  apiKeyId: number;
+  /** '' = the key's own (legacy) slot */
+  tenantId: string;
+  slot: string;
+  /** prefix to write upstream — already carries its cache_control markers */
+  prefix: any;
+  /** encrypted Anthropic key (per-key or workspace default, already resolved) */
+  providerKeyEncrypted: string | null;
+  upstreamGatewayUrl?: string | null;
+  extraHeaders?: Record<string, string> | null;
+  /** effective daily warming budget for the key, USD */
+  budgetUsd: number;
+  /** write on the 1h TTL — a long hold is cheaper as one 1h write than as a
+   *  4-minute ping stream (see HOLD_UPGRADE_MIN_MS) */
+  use1h: boolean;
+}
+
+export type PrewarmResult =
+  /** the cache is live upstream now; `tokens` is what the provider reports cached */
+  | { status: "warmed"; tokens: number }
+  /** the provider cached nothing — the prefix is under its minimum size */
+  | { status: "too_small" }
+  /** this slot was warmed moments ago — it is warm, no second write needed */
+  | { status: "recent" }
+  | { status: "budget" }
+  | { status: "no_key" }
+  | { status: "failed" };
+
+// One pre-warm write per slot per minute. A chat command now spends money, so
+// repeating it in a loop must not: inside the window the cache is warm anyway.
+export const PREWARM_COOLDOWN_MS = 60_000;
+
+export async function prewarmNow(
+  deps: KeepaliveDeps, p: PrewarmParams
+): Promise<PrewarmResult> {
+  const { pool, encryptionKey } = deps;
+  const doFetch = deps.fetchImpl ?? fetch;
+  const now = deps.now ? deps.now() : Date.now();
+  const today = new Date(now).toISOString().slice(0, 10);
+
+  if (!p.providerKeyEncrypted) return { status: "no_key" };
+  if (!p.prefix?.model) return { status: "too_small" };
+
+  // daily budget guard, summed across the key's slots (same rule as the sweep)
+  const { rows } = await pool.query<{ spent: string }>(
+    `SELECT COALESCE(sum(CASE WHEN spend_day = $2::date THEN spend_today_usd ELSE 0 END), 0) AS spent
+       FROM keepalive_state WHERE api_key_id = $1`,
+    [p.apiKeyId, today]
+  );
+  if (Number(rows[0]?.spent ?? 0) >= p.budgetUsd) return { status: "budget" };
+
+  // atomic claim on this slot's ping window: it enforces the cooldown and, at
+  // the same time, keeps two concurrent commands (or replicas) from each
+  // paying for the same write
+  const claim = await pool.query(
+    `UPDATE keepalive_state SET last_ping_at = to_timestamp($2 / 1000.0)
+      WHERE api_key_id = $1 AND provider = 'anthropic' AND tenant_id = $3 AND slot = $4
+        AND (last_ping_at IS NULL OR last_ping_at <= to_timestamp($5 / 1000.0))`,
+    [p.apiKeyId, now, p.tenantId, p.slot, now - PREWARM_COOLDOWN_MS]
+  );
+  if (!claim.rowCount) return { status: "recent" };
+
+  let providerKey: string;
+  try {
+    providerKey = decrypt(p.providerKeyEncrypted, encryptionKey);
+  } catch {
+    console.error(`prewarm: decrypt failed for key ${p.apiKeyId}`);
+    return { status: "failed" };
+  }
+
+  const prefix = p.use1h ? upgradeCacheControlTo1h(p.prefix) : p.prefix;
+  let result: PingResult;
+  try {
+    result = await pingAnthropic(
+      deps, prefix, providerKey, doFetch, p.upstreamGatewayUrl, p.extraHeaders);
+  } catch (e) {
+    console.error(`prewarm failed for ${p.apiKeyId}/anthropic:`, (e as Error).message);
+    return { status: "failed" };
+  }
+
+  const written = result.usage.cache_creation_input_tokens;
+  const read = result.usage.cache_read_input_tokens;
+  // A 1h marker on a still-warm 5m entry only READS it (measured — see the
+  // header): claiming a 1h entry exists when it doesn't would switch the sweep
+  // to the 55-minute cadence and let the cache die in five. Only a real write
+  // stamps last_1h_write_at.
+  const wrote1h = p.use1h && written > 0;
+  await pool.query(
+    `UPDATE keepalive_state
+        SET last_ping_at = to_timestamp($2 / 1000.0)` +
+        (wrote1h ? `, last_1h_write_at = to_timestamp($2 / 1000.0)` : ``) + `,
+            pings_today = CASE WHEN spend_day = $3::date THEN pings_today + 1 ELSE 1 END,
+            spend_today_usd = CASE WHEN spend_day = $3::date THEN spend_today_usd + $4 ELSE $4 END,
+            spend_day = $3::date
+      WHERE api_key_id = $1 AND provider = 'anthropic' AND tenant_id = $5 AND slot = $6`,
+    [p.apiKeyId, now, today, result.cost.actualUsd, p.tenantId, p.slot]
+  );
+  await insertRequestLog(pool, {
+    apiKeyId: p.apiKeyId,
+    provider: "anthropic",
+    model: p.prefix.model,
+    status: result.status,
+    latencyMs: 0,
+    isStream: false,
+    isKeepalive: true,
+    usage: result.usage,
+    cost: result.cost,
+    prefixHashes: null,
+    breakerDetected: false,
+    tenantId: p.tenantId === "" ? null : p.tenantId,
+  });
+
+  if (result.status >= 400) return { status: "failed" };
+  // nothing cached means the prefix is below the provider's minimum — say so
+  // rather than promising a warm cache that doesn't exist
+  if (written + read === 0) return { status: "too_small" };
+  return { status: "warmed", tokens: written + read };
+}
+
 export function startKeepaliveLoop(deps: KeepaliveDeps, intervalMs = 30_000): NodeJS.Timeout {
   let running = false; // a slow sweep must not overlap the next tick
   const t = setInterval(() => {

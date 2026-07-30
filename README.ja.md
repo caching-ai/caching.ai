@@ -24,7 +24,7 @@
 
 - **キャッシュ分析** — 実際のヒット率、節約できた金額、そして誰も見せてくれない数字：キャッシュされるべきだったのにされなかったプロンプトで無駄になった金額。保存するのはトークン数のみで、プロンプト／レスポンスの本文は一切保存しません。
 - **キャッシュガード** — `cache_control` の自動注入（Anthropic）、GPT-5.6+ のキャッシュ復元（5.6 世代はブレークポイントでのみマッチするため、素朴な共有プレフィックスではリクエスト間ヒットが 0% になります——明示的な `prompt_cache_breakpoint` と安定した `prompt_cache_key` を注入し、実測 0% → 97.8% のプレフィックスヒット、定常トラフィック — [BENCHMARK.ja.md](BENCHMARK.ja.md) の S6 セル）、そしてキャッシュブレーカーの検出と推定される根本原因の提示（タイムスタンプ、ランダム ID、ツールの並べ替え）。
-- **キャッシュウォーマー（keep-alive）** *（キーごとのオプトイン、Anthropic のみ — 設計上の判断です）* — 1 トークンの ping で、再利用が経済的である間だけ（最大 62.5 分）プレフィックスを温め直します。日次予算はユーザーが管理できます。他のプロバイダーはアップストリーム側で自前でキャッシュを保持するため（実測済み — [BENCHMARK.ja.md](BENCHMARK.ja.md)）、ping が元を取れない場所ではプロキシは予算を一切使いません。長時間のホールドは、ping の連続送信ではなく 1 回の 1h-TTL 書き込みとして処理されます。席を外すときは、チャットで `"keep my cache warm for 2 hours"` と送るだけ——プロキシ自身が応答し、ウォーミングを保持します（下記参照）。
+- **キャッシュウォーマー（keep-alive）** *（キーごとのオプトイン、Anthropic のみ — 設計上の判断です）* — 1 トークンの ping で、再利用が経済的である間だけ（最大 62.5 分）プレフィックスを温め直します。日次予算はユーザーが管理できます。他のプロバイダーはアップストリーム側で自前でキャッシュを保持するため（実測済み — [BENCHMARK.ja.md](BENCHMARK.ja.md)）、ping が元を取れない場所ではプロキシは予算を一切使いません。長時間のホールドは、ping の連続送信ではなく 1 回の 1h-TTL 書き込みとして処理されます。席を外すときは、チャットで `"keep my cache warm for 2 hours"` と送るだけ——プロキシ自身が応答し、その会話をその場で予熱してからウォーミングを保持します（下記参照）。
 - **プレフィックスオプティマイザー** — リクエスト間でプロンプトのどの部分が変化しているかを計測し、修正方法を提示します。
 - **サブテナント** — 1 つの `ck_` キーで多数のエンド顧客にサービスを提供していますか？ 各リクエストに `X-Cache-Tenant`（さらにエンドユーザーごとに `X-Cache-Warm-Slot`）を付けるだけで、テナントごとのキャッシュポリシー、使用量・節約額の帰属、ウォームスロットが得られます — 管理は `/admin/v1/tenants` でそのキー自体を使ってプログラム的に行えます。顧客ごとにキーを発行する必要はありません。
 
@@ -50,14 +50,18 @@ ANTHROPIC_API_KEY=ck_your_caching_ai_key
 
 ```
 "keep my cache warm for 2 hours"
-"캐시 2시간 지켜줘" · "キャッシュを2時間保温して"
-"mantén mi caché caliente 2 horas" · "帮我保温缓存 2 小时"
-cai:hold 45m          # explicit command — works anywhere, any language
+"캐시 2시간 지켜줘" · "キャッシュを2時間保温して" · "帮我保温缓存 2 小时"
+"mantén mi caché caliente 2 horas" · "halte meinen Cache 2 Stunden warm"
+"держи кэш тёплым 2 часа" · "giữ cache nóng trong 2 giờ"
+cai:warm 45m          # explicit command — works anywhere, any language
 
-→ 🔥 Warming held for 2 hours. (answered at the proxy, $0)
+→ 🔥 Pre-warmed this conversation right now (18,204 tokens cached) and
+  holding it warm for 2 hours.      (answered at the proxy, 0 model tokens)
 ```
 
-デフォルトは 2 時間で、5 分〜12 時間の範囲に制限されます。すべてのパス——Anthropic Messages、OpenAI chat & responses（Codex）、Gemini、Grok——で動作し、質問した言語（ko/en/ja/es/zh）で応答します。メッセージは短く（60 文字以下）、明確にキャッシュに関する内容である必要があります。実際のプロンプトに見えるものは、そのまま通過します。キープアライブがキーで有効になっている必要があり、日次ウォーミング予算も引き続き適用されます。ホールド中は、コンソールに「Warm hold active · until HH:MM」バッジが表示されます。
+デフォルトは 2 時間で、5 分〜12 時間の範囲に制限されます。さらにこのコマンドは**保温しながらその場で予熱**します。コマンドが届いた会話こそ保温したい会話なので、プロキシはそのリクエストのプレフィックスを捕まえてプロバイダへ一度書き込み、実際にキャッシュされたトークン数をそのまま返します。頼んだ瞬間からキャッシュは生きており、事前にウォーミング済みのリクエストは不要です。
+
+すべてのパス——Anthropic Messages、OpenAI chat & responses（Codex）、Gemini、Grok——で動作し、質問した言語で応答します: ko/en/ja/zh/es/pt/fr/de/it/ru/tr/vi/id/hi/th/ar。メッセージは短く（80 文字以下）、明確にキャッシュに関する内容である必要があります。実際のプロンプトに見えるものは、そのまま通過します。キープアライブがキーで有効になっている必要があり、予熱の書き込みは保温 ping と同じく日次予算内で計量されます（1 分以内に同じコマンドを繰り返しても 2 回課金されません）。90 分以上のホールドは ping の連続ではなく 1 時間 TTL の書き込み 1 回で予熱します。ホールド中は、コンソールに「Warm hold active · until HH:MM」バッジが表示されます。
 
 ### Claude Code なら完全自動 ([`claude-plugin/`](claude-plugin/))
 

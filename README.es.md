@@ -47,7 +47,8 @@ verdad:
   retenciones largas se sirven como una sola escritura con TTL de 1 h en vez
   de un flujo de pings. ¿Te vas a ausentar? Escribe
   `"keep my cache warm for 2 hours"` en el chat — el proxy lo responde por
-  sí mismo y mantiene el calentamiento (ver abajo).
+  sí mismo, precalienta esa conversación al instante y mantiene el
+  calentamiento (ver abajo).
 - **Optimizador de prefijos** — mide qué parte de tu prompt cambia entre
   peticiones y te dice cómo arreglarlo.
 - **Subinquilinos** — ¿sirves a muchos clientes finales con una sola clave
@@ -83,21 +84,32 @@ cuesta cero tokens:
 
 ```
 "keep my cache warm for 2 hours"
-"캐시 2시간 지켜줘" · "キャッシュを2時間保温して"
-"mantén mi caché caliente 2 horas" · "帮我保温缓存 2 小时"
-cai:hold 45m          # explicit command — works anywhere, any language
+"캐시 2시간 지켜줘" · "キャッシュを2時間保温して" · "帮我保温缓存 2 小时"
+"mantén mi caché caliente 2 horas" · "halte meinen Cache 2 Stunden warm"
+"держи кэш тёплым 2 часа" · "giữ cache nóng trong 2 giờ"
+cai:warm 45m          # explicit command — works anywhere, any language
 
-→ 🔥 Warming held for 2 hours. (answered at the proxy, $0)
+→ 🔥 Pre-warmed this conversation right now (18,204 tokens cached) and
+  holding it warm for 2 hours.      (answered at the proxy, 0 model tokens)
 ```
 
-Por defecto 2 h, acotado entre 5 min y 12 h. Funciona en todas las rutas —
-Anthropic Messages, chat y responses de OpenAI (Codex), Gemini, Grok — y
-responde en el idioma en el que preguntaste (ko/en/ja/es/zh). El mensaje
-debe ser corto (≤ 60 caracteres) y tratar claramente sobre la caché;
-cualquier cosa que parezca un prompt real pasa sin tocarse. El keep-alive
-debe estar habilitado en la clave, y el presupuesto diario de calentamiento
-sigue aplicando. La consola muestra una insignia
-"Warm hold active · until HH:MM" mientras dura.
+Por defecto 2 h, acotado entre 5 min y 12 h — y el comando **precalienta
+mientras retiene**. La conversación en la que llegó el comando ES la
+conversación que hay que mantener caliente, así que el proxy captura el
+prefijo de esa petición, lo escribe una vez en el proveedor y cita los tokens
+que el proveedor dice haber cacheado. La caché está viva en cuanto lo pides;
+no hace falta ninguna petición calentada previa.
+
+Funciona en todas las rutas — Anthropic Messages, chat y responses de OpenAI
+(Codex), Gemini, Grok — y responde en el idioma en el que preguntaste:
+ko/en/ja/zh/es/pt/fr/de/it/ru/tr/vi/id/hi/th/ar. El mensaje debe ser corto
+(≤ 80 caracteres) y tratar claramente sobre la caché; cualquier cosa que
+parezca un prompt real pasa sin tocarse. El keep-alive debe estar habilitado
+en la clave; la escritura de precalentamiento se mide como un ping de
+calentamiento dentro del presupuesto diario (repetir el comando en menos de
+un minuto nunca paga una segunda escritura) y una retención de 90 min o más
+se escribe una sola vez con el TTL de 1 h en lugar de una ristra de pings. La
+consola muestra una insignia "Warm hold active · until HH:MM" mientras dura.
 
 ### Claude Code: totalmente automático ([`claude-plugin/`](claude-plugin/))
 
